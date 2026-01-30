@@ -61,7 +61,7 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew assembleOnlineStableRelease assembleOfflineStableRelease
+        run: ./gradlew assembleOnlineStableRelease assembleOfflineStableRelease -PAPP_ID=com.android.packageinstaller
 
       - name: Find and Rename Universal APKs
         id: rename_apk
@@ -84,14 +84,3 @@ jobs:
             echo "Renaming $ORIGINAL_APK -> $NEW_APK_PATH"
             mv "$ORIGINAL_APK" "$NEW_APK_PATH"
           done
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "InstallerX Revived stable ${{ inputs.version_tag }}"
-          tag_name: ${{ inputs.version_tag }}
-          body: ${{ inputs.changelog }}
-          prerelease: false
-          files: |
-            app/build/outputs/apk/onlineStable/release/InstallerX-Revived-online-${{ inputs.version_tag }}.apk
-            app/build/outputs/apk/offlineStable/release/InstallerX-Revived-offline-${{ inputs.version_tag }}.apk
