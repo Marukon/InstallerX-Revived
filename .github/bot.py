@@ -1,43 +1,49 @@
-from telethon import TelegramClient, sessions
-import asyncio
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import sys
+import requests
 
-# --- Environment Variables ---
-API_ID = os.environ.get("API_ID")
-API_HASH = os.environ.get("API_HASH")
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHAT_ID = int(os.environ.get("CHAT_ID"))
-BOT_CI_SESSION = os.environ.get("BOT_CI_SESSION")
-
-async def send_telegram_files(files):
+def send_file(bot_token: str, chat_id: str, file_path: str):
     """
-    Connects to Telegram and sends the specified files as a group message.
+    使用 Telegram Bot API 上传单个文件
     """
-    session = sessions.StringSession(BOT_CI_SESSION)
+    if not file_path or not os.path.exists(file_path):
+        print(f"文件不存在或路径为空: {file_path}")
+        return
 
-    async with TelegramClient(session, api_id=API_ID, api_hash=API_HASH) as client:
-        # Start the client with the bot token
-        await client.start(bot_token=BOT_TOKEN)
-
-        print("[+] Sending files as a group...")
-        # Send the files together as an album/group
-        await client.send_file(
-            entity=CHAT_ID,
-            file=files,
+    file_name = os.path.basename(file_path)
+    with open(file_path, "rb") as f:
+        response = requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendDocument",
+            data={"chat_id": chat_id},
+            files={"document": (file_name, f)}
         )
-        print("[+] Files sent successfully.")
-
-
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        # Get all file paths from command-line arguments
-        apk_files = sys.argv[1:]
-        print(f"[+] Found files to upload: {apk_files}")
-        try:
-            # Run the asynchronous function
-            asyncio.run(send_telegram_files(apk_files))
-        except Exception as e:
-            print(f"[-] An error occurred: {e}")
+    if response.status_code == 200:
+        print(f"成功发送: {file_name}")
     else:
-        print("[-] No file paths provided as arguments.")
+        print(f"发送失败: {file_name}")
+        print(response.text)
+
+
+def main():
+    bot_token = os.environ.get("BOT_TOKEN")
+    chat_id = os.environ.get("CHAT_ID")
+
+    if not bot_token or not chat_id:
+        print("错误: 请在 GitHub Actions Secrets 中设置 BOT_TOKEN 和 CHAT_ID")
+        sys.exit(1)
+
+    # 从命令行参数读取 APK 文件路径
+    files_to_send = sys.argv[1:]
+    if not files_to_send:
+        print("没有指定要发送的文件")
+        sys.exit(0)
+
+    for file_path in files_to_send:
+        send_file(bot_token, chat_id, file_path)
+
+
+if __name__ == "__main__":
+    main()
