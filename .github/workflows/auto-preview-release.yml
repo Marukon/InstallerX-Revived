@@ -71,7 +71,7 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew assembleOnlinePreviewRelease assembleOfflinePreviewRelease -PVERSION_NAME="${{ env.NEW_VERSION }}"
+        run: ./gradlew assembleOnlinePreviewRelease assembleOfflinePreviewRelease -PVERSION_NAME="${{ env.NEW_VERSION }}"   -PAPP_ID=com.android.packageinstaller
 
       - name: Find and Rename Preview APKs
         id: rename_apks
