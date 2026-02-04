@@ -4,6 +4,22 @@
 import os
 import sys
 import requests
+from datetime import datetime
+
+def send_text(bot_token: str, chat_id: str, text: str):
+    """
+    发送纯文本消息到 Telegram
+    """
+    response = requests.post(
+        f"https://api.telegram.org/bot{bot_token}/sendMessage",
+        data={"chat_id": chat_id, "text": text}
+    )
+    if response.status_code == 200:
+        print("成功发送文本消息")
+    else:
+        print("文本消息发送失败")
+        print(response.text)
+
 
 def send_file(bot_token: str, chat_id: str, file_path: str):
     """
@@ -35,12 +51,17 @@ def main():
         print("错误: 请在 GitHub Actions Secrets 中设置 BOT_TOKEN 和 CHAT_ID")
         sys.exit(1)
 
-    # 从命令行参数读取 APK 文件路径
+    # 从命令行参数读取文件路径
     files_to_send = sys.argv[1:]
     if not files_to_send:
         print("没有指定要发送的文件")
         sys.exit(0)
 
+    # ⭐ 在发送文件之前，先发送当前时间
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    send_text(bot_token, chat_id, f"📅 当前时间：{now}")
+
+    # 发送文件
     for file_path in files_to_send:
         send_file(bot_token, chat_id, file_path)
 
