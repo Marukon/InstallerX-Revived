@@ -1,6 +1,7 @@
 name: Dev Branch Build & Artifact
 
 on:
+  workflow_dispatch:
   push:
     branches-ignore:
       - 'main'
