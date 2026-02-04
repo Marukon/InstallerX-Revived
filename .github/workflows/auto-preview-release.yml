@@ -1,6 +1,7 @@
 name: Automatic Alpha Pre-Release (Latest Only)
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
     # 仅在以下路径发生变更时触发发布，忽略文档修改
