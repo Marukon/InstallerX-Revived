@@ -62,12 +62,12 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew assembleOnlineStableRelease assembleOfflineStableRelease -PAPP_ID=com.android.packageinstaller
-
       - name: Find and Rename Universal APKs
         id: rename_apk
         run: |
           PROJECT_NAME="InstallerX-Revived"
           VERSION_TAG="${{ inputs.version_tag }}"
+
           for FLAVOR in online offline; do
             APK_DIR="app/build/outputs/apk/${FLAVOR}Stable/release/"
             ORIGINAL_APK=$(find "$APK_DIR" -maxdepth 1 -type f -name "*.apk" | head -n 1)
@@ -83,4 +83,22 @@ jobs:
 
             echo "Renaming $ORIGINAL_APK -> $NEW_APK_PATH"
             mv "$ORIGINAL_APK" "$NEW_APK_PATH"
+
+            # ⭐ 输出路径
+            if [ "$FLAVOR" = "online" ]; then
+              echo "online_apk=$NEW_APK_PATH" >> $GITHUB_OUTPUT
+            else
+              echo "offline_apk=$NEW_APK_PATH" >> $GITHUB_OUTPUT
+            fi
           done
+
+          
+      - name: Upload to Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          pip3 install telethon
+          python3 .github/bot.py \
+            "${{ steps.rename_apk.outputs.online_apk }}" \
+            "${{ steps.rename_apk.outputs.offline_apk }}"
