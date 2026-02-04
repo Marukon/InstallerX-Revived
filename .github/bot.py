@@ -60,7 +60,8 @@ def main():
     # ⭐ 在发送文件之前，先发送当前时间
     tz = timezone(timedelta(hours=8))
     now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-    send_text(bot_token, chat_id, f"📅 当前时间（UTC+8）：{now}"}")
+    send_text(bot_token, chat_id, f"📅 当前时间（UTC+8）：{now}")
+
 
     # 发送文件
     for file_path in files_to_send:
