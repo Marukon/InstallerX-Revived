@@ -1,18 +1,32 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
-  "baseBranches": ["dev"],
+  "baseBranchPatterns": [
+    "dev"
+  ],
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "all non-major dependencies",
       "groupSlug": "all-minor-patch"
     },
     {
       "description": "Ignore AndroidAppProcess updates",
-      "matchPackageNames": ["com.github.wxxsfxyzm:AndroidAppProcess"],
+      "matchPackageNames": [
+        "com.github.wxxsfxyzm:AndroidAppProcess"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Disable all npm dependencies updates",
+      "matchManagers": [
+        "npm"
+      ],
       "enabled": false
     }
   ],
