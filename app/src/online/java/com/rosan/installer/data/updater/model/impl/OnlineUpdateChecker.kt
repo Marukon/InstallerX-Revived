@@ -149,27 +149,22 @@ class OnlineUpdateChecker(
 
     /**
      * Split version string into numeric part and optional hash part.
-     * Example: "2.3.1.87e0cc9" -> Pair("2.3.1", "87e0cc9")
-     *          "2.3.1" -> Pair("2.3.1", null)
+     * Format strictly guaranteed as: major.minor.patch[.hash]
+     *
+     * Examples:
+     * - "2.3.3" -> Pair("2.3.3", null)
+     * - "2.3.3.d69b04f" -> Pair("2.3.3", "d69b04f")
+     * - "2.3.3.4365770" -> Pair("2.3.3", "4365770")
      */
     private fun splitVersion(version: String): Pair<String, String?> {
         val parts = version.split('.')
 
-        // Find the first non-numeric part (hash identifier)
-        val numericParts = mutableListOf<String>()
-        var hashPart: String? = null
+        // Extract exactly the first 3 parts for major.minor.patch
+        val numericVersion = parts.take(3).joinToString(".")
 
-        for (part in parts) {
-            if (part.toIntOrNull() != null) {
-                numericParts.add(part)
-            } else {
-                // Found non-numeric part, treat as hash
-                hashPart = part
-                break
-            }
-        }
+        // Extract the 4th part as hash if it exists
+        val hashPart = parts.getOrNull(3)
 
-        val numericVersion = numericParts.joinToString(".")
         return Pair(numericVersion, hashPart)
     }
 

@@ -367,7 +367,7 @@ class OkHttpNetworkResolver : NetworkResolver, KoinComponent {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return false
 
-                val body = response.body ?: return false
+                val body = response.body
                 val stream = body.byteStream()
                 val buffer = ByteArray(4)
                 var bytesRead = 0

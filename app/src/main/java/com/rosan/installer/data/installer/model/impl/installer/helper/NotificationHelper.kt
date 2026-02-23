@@ -32,11 +32,11 @@ class NotificationHelper(
         Pausing(R.drawable.round_hourglass_disabled_24)
     }
 
-    val openIntent: PendingIntent? = BroadcastHandler.openIntent(context, installer)
-    val analyseIntent: PendingIntent? = BroadcastHandler.namedIntent(context, installer, BroadcastHandler.Name.Analyse)
-    val installIntent: PendingIntent? = BroadcastHandler.namedIntent(context, installer, BroadcastHandler.Name.Install)
-    val cancelIntent: PendingIntent? = BroadcastHandler.namedIntent(context, installer, BroadcastHandler.Name.Cancel)
-    val finishIntent: PendingIntent? = BroadcastHandler.namedIntent(context, installer, BroadcastHandler.Name.Finish)
+    val openIntent: PendingIntent = BroadcastHandler.openIntent(context, installer)
+    val analyseIntent: PendingIntent = BroadcastHandler.namedIntent(context, installer, BroadcastHandler.Name.Analyse)
+    val installIntent: PendingIntent = BroadcastHandler.namedIntent(context, installer, BroadcastHandler.Name.Install)
+    val cancelIntent: PendingIntent = BroadcastHandler.namedIntent(context, installer, BroadcastHandler.Name.Cancel)
+    val finishIntent: PendingIntent = BroadcastHandler.namedIntent(context, installer, BroadcastHandler.Name.Finish)
 
     // Resolve specific launch intent considering privileged access
     fun getLaunchPendingIntent(packageName: String?): PendingIntent? {
