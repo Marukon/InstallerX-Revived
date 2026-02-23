@@ -1,7 +1,6 @@
 package com.rosan.installer.data.updater.model.impl
 
 import android.content.Context
-import com.rosan.installer.BuildConfig
 import com.rosan.installer.build.RsConfig
 import com.rosan.installer.build.model.entity.Level
 import com.rosan.installer.data.app.model.entity.DataEntity
@@ -20,6 +19,7 @@ class OnlineUpdateChecker(
     companion object {
         private const val REPO_OWNER = "wxxsfxyzm"
         private const val REPO_NAME = "InstallerX-Revived"
+        private const val OFFICIAL_PACKAGE_NAME = "com.rosan.installer.x.revived"
     }
 
     override fun check(): UpdateChecker.CheckResult? {
@@ -35,9 +35,11 @@ class OnlineUpdateChecker(
             return null
         }
 
-        // Skip check for non-target app
-        if (context.packageName != BuildConfig.APPLICATION_ID) {
-            Timber.d("Update check skipped: Not the target app")
+        // Skip check if the runtime package name does not match the hardcoded official one.
+        // This effectively blocks update checks for both reverse-engineered apps with changed names
+        // and forward-compiled forks with modified applicationIds.
+        if (context.packageName != OFFICIAL_PACKAGE_NAME) {
+            Timber.d("Update check skipped: Unofficial package name")
             return null
         }
 
