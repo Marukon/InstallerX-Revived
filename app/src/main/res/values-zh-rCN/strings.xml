@@ -535,10 +535,8 @@
     <string name="extended_menu">扩展菜单</string>
     <string name="auto_silent_install">自动静默安装</string>
     <string name="auto_silent_install_desc">对话框安装开始时自动静默安装</string>
-    <string name="disable_notification">安装过程保持前台显示</string>
-    <string name="close_immediately_on_dialog_dismiss">安装过程中对话框将保持前台显示，不弹出安装通知</string>
-    <string name="disable_notification_on_dismiss">对话框关闭时退出</string>
-    <string name="close_notification_immediately_on_dialog_dismiss">关闭对话框将静默退出</string>
+    <string name="disable_notification_on_dismiss">对话框隐藏时退出安装</string>
+    <string name="close_notification_immediately_on_dialog_dismiss">主动隐藏对话框将取消本次安装，而不是挂起到通知栏</string>
     <string name="set_countdown">设定倒计时</string>
     <string name="dhizuku_auto_close_countdown_desc">Dhizuku 安装成功后自动关闭的倒计时</string>
     <string name="dhizuku_cannot_set_package_source_desc">Dhizuku 模式不支持自定义软件包来源！</string>
