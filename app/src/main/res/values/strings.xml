@@ -454,6 +454,7 @@
     <string name="permission_unknown">Unknown permission</string>
     <string name="installer_running">InstallerX running</string>
     <string name="installer_version_short">Ver. %1$s (%2$s)</string>
+    <string name="version_with_prefix_format">%1$s %2$s</string>
     <string name="installer_version_name_label">Version Name:</string>
     <string name="installer_version_code_label">Version Code:</string>
     <string name="installer_version">Version: %1$s (%2$s)</string>

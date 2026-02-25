@@ -444,6 +444,7 @@
     <string name="permission_unknown">未知权限</string>
     <string name="installer_running">InstallerX 运行中</string>
     <string name="installer_version_short">版本：%1$s (%2$s)</string>
+    <string name="version_with_prefix_format">%1$s%2$s</string>
     <string name="installer_version_name_label">版本名称：</string>
     <string name="installer_version_code_label">版本代码：</string>
     <string name="installer_version">版本：%1$s (%2$s)</string>
