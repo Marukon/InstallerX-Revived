@@ -22,6 +22,7 @@
     <string name="lab">实验室</string>
     <string name="lab_desc">访问实验性或开发中的新功能</string>
     <string name="about_detail">关于 InstallerX Revived</string>
+    <string name="app_version_info_format">%1$s%2$s %3$s (%4$s)</string>
     <string name="updating">正在更新…</string>
     <string name="get_update_detail">检查软件更新和新功能</string>
     <string name="update_available">有可用更新：%1$s</string>
@@ -444,6 +445,7 @@
     <string name="permission_unknown">未知权限</string>
     <string name="installer_running">InstallerX 运行中</string>
     <string name="installer_version_short">版本：%1$s (%2$s)</string>
+    <string name="version_with_prefix_format">%1$s%2$s</string>
     <string name="installer_version_name_label">版本名称：</string>
     <string name="installer_version_code_label">版本代码：</string>
     <string name="installer_version">版本：%1$s (%2$s)</string>
