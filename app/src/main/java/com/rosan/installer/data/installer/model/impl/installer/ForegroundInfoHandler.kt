@@ -49,7 +49,7 @@ class ForegroundInfoHandler(scope: CoroutineScope, installer: InstallerRepo) :
         private const val XMSF_PACKAGE_NAME = "com.xiaomi.xmsf"
 
         // The duration to keep the network blocked to bypass Xiaomi's notification scanner
-        private const val XIAOMI_MAGIC_BLIND_WINDOW_MS = 50L
+        private const val XIAOMI_MAGIC_BLIND_WINDOW_MS = 100L
     }
 
     private data class NotificationSettings(
@@ -261,7 +261,7 @@ class ForegroundInfoHandler(scope: CoroutineScope, installer: InstallerRepo) :
     }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
-    private suspend fun setNotificationImmediate(notification: Notification?, isMiIsland: Boolean = false) {
+    private fun setNotificationImmediate(notification: Notification?, isMiIsland: Boolean = false) {
         if (notification == null) {
             notificationManager.cancel(notificationId)
         } else {
@@ -274,7 +274,7 @@ class ForegroundInfoHandler(scope: CoroutineScope, installer: InstallerRepo) :
     }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
-    private suspend fun notifyWithXiaomiMagic(notificationId: Int, notification: Notification) {
+    private fun notifyWithXiaomiMagic(notificationId: Int, notification: Notification) {
         val hasPrivilege = globalAuthorizer == ConfigEntity.Authorizer.Shizuku
 
         if (!hasPrivilege) {
@@ -282,7 +282,8 @@ class ForegroundInfoHandler(scope: CoroutineScope, installer: InstallerRepo) :
             return
         }
 
-        withContext(Dispatchers.IO) {
+        // Launch asynchronously so it does not block the Flow's collect mechanism
+        scope.launch(Dispatchers.IO) {
             networkMutex.withLock {
                 try {
                     // 1. Block the network and update state
@@ -302,7 +303,7 @@ class ForegroundInfoHandler(scope: CoroutineScope, installer: InstallerRepo) :
                 } catch (e: Exception) {
                     Timber.e(e, "Xiaomi magic execution failed")
                 } finally {
-                    // Use NonCancellable to ensure network is restored even if the coroutine is cancelled during delay
+                    // Use NonCancellable to ensure network is restored even if the coroutine is cancelled
                     withContext(NonCancellable) {
                         try {
                             PrivilegedManager.setPackageNetworkingEnabled(
@@ -313,7 +314,6 @@ class ForegroundInfoHandler(scope: CoroutineScope, installer: InstallerRepo) :
                         } catch (restoreEx: Exception) {
                             Timber.e(restoreEx, "Failed to restore network natively")
                         } finally {
-                            // Reset state so onFinish knows it has been handled
                             isXiaomiNetworkBlocked = false
                         }
                     }

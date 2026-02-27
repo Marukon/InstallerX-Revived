@@ -176,8 +176,8 @@ fun MiuixLabPage(
                 ) {
                     if (isMiIslandSupported)
                         MiuixSwitchWidget(
-                            title = "小米超级岛",
-                            description = "覆盖全局的通知样式，仅当应用授权器配置为 shizuku 时可以绕过系统签名限制。root 用户使用其他方式关闭限制后可直接打开使用",
+                            title = stringResource(R.string.lab_mi_island),
+                            description = stringResource(R.string.lab_mi_island_desc),
                             checked = state.labUseMiIsland,
                             onCheckedChange = { viewModel.dispatch(PreferredViewAction.LabChangeUseMiIsland(it)) }
                         )

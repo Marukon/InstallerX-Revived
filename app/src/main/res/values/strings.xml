@@ -714,4 +714,6 @@
     <string name="lab_unstable_features">Unstable features</string>
     <string name="lab_set_install_requester">Set Install Requester</string>
     <string name="lab_set_install_requester_desc">Fill OriginatingUid field with caller package to match system behavior</string>
+    <string name="lab_mi_island">Mi Super Island</string>
+    <string name="lab_mi_island_desc">Global notification style. System signature verification can only be bypassed when the custom app-authenticator is set to Shizuku. Root users can enable this directly after manually disabling signature restrictions</string>
 </resources>

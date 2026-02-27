@@ -5,6 +5,7 @@ package com.rosan.installer.data.installer.model.impl.installer.helper
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
+import android.graphics.Color
 import android.graphics.drawable.Icon
 import androidx.core.app.NotificationCompat
 import com.rosan.installer.R
@@ -185,10 +186,14 @@ class MiIslandNotificationBuilder(
 
         val isAutoMode = installer.config.installMode == ConfigEntity.InstallMode.AutoNotification
 
+        val lightLogoIcon = Icon.createWithResource(context, R.drawable.ic_notification_logo).setTint(Color.BLACK)
+        val darkLogoIcon = Icon.createWithResource(context, R.drawable.ic_notification_logo).setTint(Color.WHITE)
+
         val islandExtras = FocusNotification.buildV3 {
-            val logoIcon = Icon.createWithResource(context, R.drawable.ic_notification_logo)
-            val fallbackLogoKey = createPicture("key_logo", logoIcon)
-            val appIconKey = appIconBitmap?.let { createPicture("key_app_icon", Icon.createWithBitmap(it)) } ?: fallbackLogoKey
+            val lightLogoKey = createPicture("key_logo_light", lightLogoIcon)
+            val darkLogoKey = createPicture("key_logo_dark", darkLogoIcon)
+
+            val appIconKey = appIconBitmap?.let { createPicture("key_app_icon", Icon.createWithBitmap(it)) } ?: lightLogoKey
 
             if (isAutoMode) {
                 islandFirstFloat = false
@@ -199,7 +204,7 @@ class MiIslandNotificationBuilder(
             }
             updatable = true
             ticker = title
-            tickerPic = appIconKey
+            tickerPic = lightLogoKey
 
             // 1. 小米岛 摘要态 (组合4：左侧 App 图标 + App 名称，右侧纯文本状态)
             island {
@@ -239,7 +244,8 @@ class MiIslandNotificationBuilder(
 
             picInfo {
                 type = 1
-                pic = fallbackLogoKey
+                pic = lightLogoKey
+                picDark = darkLogoKey
             }
 
             if (actionsList.isNotEmpty()) {
