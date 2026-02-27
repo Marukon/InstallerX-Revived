@@ -110,5 +110,5 @@ interface IPrivilegedService {
      */
     Bundle getSessionDetails(int sessionId);
 
-    void setPackageNetworkingEnabled(String packageName, boolean enabled);
+    void setPackageNetworkingEnabled(int uid, boolean enabled);
 }

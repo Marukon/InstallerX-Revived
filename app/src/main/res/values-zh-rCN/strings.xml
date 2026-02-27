@@ -698,4 +698,6 @@
     <string name="lab_unstable_features">不稳定功能</string>
     <string name="lab_set_install_requester">设置安装请求方</string>
     <string name="lab_set_install_requester_desc">向安装会话填写 OriginatingUid 字段来记录发起安装的应用，匹配系统包管理器行为</string>
+    <string name="lab_mi_island">小米超级岛</string>
+    <string name="lab_mi_island_desc">覆盖全局通知样式。仅当应用授权器设置为 Shizuku 时可绕过系统签名限制；Root 用户在手动关闭系统签名验证后可直接开启</string>
 </resources>

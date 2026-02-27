@@ -422,7 +422,7 @@ class DefaultPrivilegedService(
         } catch (e: Exception) {
             // Catch potential exceptions, e.g., if the package name is invalid,
             // though checkPermission typically returns PERMISSION_DENIED for that.
-            Timber.tag(TAG).e(e, "Failed to check permission '$permission' for '$packageName'", e)
+            Timber.tag(TAG).e(e, "Failed to check permission '$permission' for '$packageName'")
             // It's safer to return false on any error.
             return false
         }
@@ -736,30 +736,29 @@ class DefaultPrivilegedService(
         return userMap
     }
 
-    override fun setPackageNetworkingEnabled(packageName: String, enabled: Boolean) {
+    override fun setPackageNetworkingEnabled(uid: Int, enabled: Boolean) {
         try {
             val cm = this.iConnectivityManager
 
-            // Get target package UID.
-            val uid = context.packageManager.getPackageUid(packageName, 0)
-
-            // Define firewall chain and rules
-            // FIREWALL_CHAIN_METERED = 1, FIREWALL_CHAIN_DOZABLE = 2, FIREWALL_CHAIN_STANDBY = 3
-            val chain = 3
+            // The integer 3 actually means FIREWALL_CHAIN_POWERSAVE (Whitelist mode).
+            // We must use 9, which represents FIREWALL_CHAIN_OEM_DENY_3 (Blacklist mode).
+            val chain = 9
 
             // FIREWALL_RULE_DEFAULT = 0, FIREWALL_RULE_ALLOW = 1, FIREWALL_RULE_DENY = 2
-            val rule = if (enabled) 1 else 2
+            // For a DENY chain, use DENY (2) to block, and DEFAULT (0) to remove the block.
+            val rule = if (enabled) 0 else 2
 
             if (!enabled) {
-                // Block network: Enable chain3 first, then add the DENY rule
+                // Block network: Ensure the chain is enabled, then apply DENY rule to the UID
                 cm.setFirewallChainEnabled(chain, true)
                 cm.setUidFirewallRule(chain, uid, rule)
-                Timber.tag(TAG).i("Xiaomi Magic: Network BLOCKED for $packageName via AIDL Stub")
+                Timber.tag(TAG).i("Network BLOCKED for UID: $uid via OEM_DENY_3")
             } else {
-                // Restore network: Set rule to ALLOW first, then disable chain3
+                // Restore network: Reset the UID rule to DEFAULT to remove the restriction
                 cm.setUidFirewallRule(chain, uid, rule)
-                cm.setFirewallChainEnabled(chain, false)
-                Timber.tag(TAG).i("Xiaomi Magic: Network RESTORED for $packageName via AIDL Stub")
+                // WARNING: Do NOT disable the entire chain here, otherwise other apps blocked
+                // in this chain will also regain network access unexpectedly.
+                Timber.tag(TAG).i("Network RESTORED for UID: $uid via OEM_DENY_3")
             }
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to set package networking via AIDL Stub")

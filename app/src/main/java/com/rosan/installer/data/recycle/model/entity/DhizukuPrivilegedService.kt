@@ -152,7 +152,7 @@ class DhizukuPrivilegedService : BasePrivilegedService() {
         throw UnsupportedOperationException("Not supported in DhizukuPrivilegedService")
     }
 
-    override fun setPackageNetworkingEnabled(packageName: String?, enabled: Boolean) {
+    override fun setPackageNetworkingEnabled(uid: Int, enabled: Boolean) {
         throw UnsupportedOperationException("Not supported in DhizukuPrivilegedService")
     }
 }

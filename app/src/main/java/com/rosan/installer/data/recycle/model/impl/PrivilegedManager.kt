@@ -324,23 +324,21 @@ object PrivilegedManager : KoinComponent {
      */
     fun setPackageNetworkingEnabled(
         authorizer: ConfigEntity.Authorizer,
-        customizeAuthorizer: String = "",
-        packageName: String,
+        uid: Int,
         enabled: Boolean
     ) {
         useUserService(
             authorizer = authorizer,
-            customizeAuthorizer = customizeAuthorizer,
             useHookMode = true,
             special = getSpecialAuth(authorizer)
         ) { userService ->
             try {
                 // Directly call the dedicated method defined in the AIDL interface
                 // This delegates the complex logic (like sequencing and FD handling) to the service side
-                userService.privileged.setPackageNetworkingEnabled(packageName, enabled)
+                userService.privileged.setPackageNetworkingEnabled(uid, enabled)
 
                 val status = if (enabled) "RESTORED" else "BLOCKED"
-                Timber.i("Network $status for $packageName")
+                Timber.i("Network $status for UID: $uid")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set package networking via dedicated IPC method")
                 throw e
