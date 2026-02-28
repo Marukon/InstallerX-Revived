@@ -8,24 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.rosan.installer.R
 import com.rosan.installer.data.app.model.enums.InstallErrorType
-import com.rosan.installer.data.app.model.exception.AuthenticationFailedException
 import com.rosan.installer.data.app.model.exception.InstallException
 import com.rosan.installer.data.app.model.exception.InstallerException
-import com.rosan.installer.data.app.model.exception.ModuleInstallCmdInitException
-import com.rosan.installer.data.app.model.exception.ModuleInstallException
-import com.rosan.installer.data.app.model.exception.ModuleInstallExitCodeNonZeroException
-import com.rosan.installer.data.app.model.exception.ModuleInstallFailedIncompatibleAuthorizerException
-import com.rosan.installer.data.app.model.exception.UninstallException
-import com.rosan.installer.data.installer.model.exception.HttpNotAllowedException
-import com.rosan.installer.data.installer.model.exception.HttpRestrictedForLocalhostException
-import com.rosan.installer.data.installer.model.exception.ResolveException
-import com.rosan.installer.data.installer.model.exception.ResolveFailedLinkNotValidException
-import com.rosan.installer.data.installer.model.exception.ResolvedFailedNoInternetAccessException
-import com.rosan.installer.data.recycle.model.exception.AppProcessNotWorkException
-import com.rosan.installer.data.recycle.model.exception.DhizukuDeadServiceException
-import com.rosan.installer.data.recycle.model.exception.DhizukuNotWorkException
-import com.rosan.installer.data.recycle.model.exception.RootNotWorkException
-import com.rosan.installer.data.recycle.model.exception.ShizukuNotWorkException
 import java.util.zip.ZipException
 
 /**

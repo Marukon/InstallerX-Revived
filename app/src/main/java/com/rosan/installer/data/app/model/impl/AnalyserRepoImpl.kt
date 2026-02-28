@@ -84,9 +84,19 @@ object AnalyserRepoImpl : AnalyserRepo {
                 Timber.w("AnalyserRepo: WARNING! ${group.packageName} has 0 entities after selection!")
             }
 
+            val baseEntity = group.entities.firstOrNull { it is AppEntity.BaseEntity } as? AppEntity.BaseEntity
+
+            // Execute the signature check.
             val signatureStatus = PackagePreprocessor.checkSignature(
-                group.entities.firstOrNull { it is AppEntity.BaseEntity } as? AppEntity.BaseEntity,
+                baseEntity,
                 group.installedInfo
+            )
+
+            // Execute the identity check.
+            val identityStatus = PackagePreprocessor.checkPackageIdentity(
+                baseEntity,
+                group.installedInfo,
+                sessionDataType.sessionType
             )
 
             PackageAnalysisResult(
@@ -94,6 +104,7 @@ object AnalyserRepoImpl : AnalyserRepo {
                 appEntities = selectableEntities,
                 installedAppInfo = group.installedInfo,
                 signatureMatchStatus = signatureStatus,
+                identityStatus = identityStatus,
                 sessionMode = detectedMode
             )
         }
