@@ -1,4 +1,19 @@
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Properties
+
+// Get git commit hash safely, compatible with configuration cache
+val gitHash: String = try {
+    providers.exec {
+        commandLine("git", "rev-parse", "--short", "HEAD")
+    }.standardOutput.asText.get().trim()
+} catch (e: Exception) {
+    "unknown"
+}
+
+val manualVersionName = project.findProperty("VERSION_NAME") as String?
+val dynamicVersionName = LocalDate.now().format(DateTimeFormatter.ofPattern("yy.MM"))
+val baseVersionName = manualVersionName ?: dynamicVersionName
 
 plugins {
     alias(libs.plugins.agp.app)
@@ -69,7 +84,7 @@ android {
         getByName("debug") {
             signingConfig =
                 if (hasCustomSigning) {
-                    println("Applying 'releaseCustom' signing to debug build.")
+                    println("Applying custom signing to debug build.")
                     signingConfigs.getByName("releaseCustom")
                 } else {
                     println("No custom signing info. Debug build will use the default debug keystore.")
@@ -85,7 +100,7 @@ android {
         getByName("release") {
             signingConfig =
                 if (hasCustomSigning) {
-                    println("Applying 'releaseCustom' signing to release build.")
+                    println("Applying custom signing to release build.")
                     signingConfigs.getByName("releaseCustom")
                 } else {
                     println("No custom signing info. Debug build will use the default debug keystore.")
@@ -105,28 +120,31 @@ android {
     productFlavors {
         create("online") {
             dimension = "connectivity"
-            // Set the build config field for this flavor.
             buildConfigField("boolean", "INTERNET_ACCESS_ENABLED", "true")
             isDefault = true
         }
 
         create("offline") {
             dimension = "connectivity"
-            // Set the build config field for this flavor.
             buildConfigField("boolean", "INTERNET_ACCESS_ENABLED", "false")
         }
 
         create("Unstable") {
             dimension = "level"
             isDefault = true
+            versionNameSuffix = ".$gitHash"
+            buildConfigField("int", "BUILD_LEVEL", "0")
         }
 
         create("Preview") {
             dimension = "level"
+            versionNameSuffix = ".$gitHash"
+            buildConfigField("int", "BUILD_LEVEL", "1")
         }
 
         create("Stable") {
             dimension = "level"
+            buildConfigField("int", "BUILD_LEVEL", "2")
         }
     }
 
@@ -150,31 +168,6 @@ android {
 
 kotlin {
     jvmToolchain(25)
-}
-
-androidComponents {
-    onVariants { variant ->
-        val level = variant.productFlavors
-            .firstOrNull { it.first == "level" }
-            ?.second
-            ?.let {
-                when (it) {
-                    "Unstable" -> 0
-                    "Preview" -> 1
-                    "Stable" -> 2
-                    else -> 0
-                }
-            } ?: 0
-
-        variant.buildConfigFields?.put(
-            "BUILD_LEVEL",
-            com.android.build.api.variant.BuildConfigField(
-                "int",
-                level.toString(),
-                null
-            )
-        )
-    }
 }
 
 aboutLibraries {
@@ -251,8 +244,6 @@ dependencies {
     implementation(libs.haze)
     implementation(libs.haze.materials)
 
-    // m3color
-    // implementation(libs.m3color)
     // okhttp
     implementation(libs.okhttp)
 

@@ -4,12 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       version_tag:
-        description: '输入版本标签 (例如 v2.2.3)'
+        description: 'Input version tag exactly (e.g. 26.03 or 26.03.01)'
         required: true
-      changelog:
-        description: '填写更新日志 (支持 Markdown)'
-        required: true
-        type: string
 
 jobs:
   build_and_release:
@@ -33,7 +29,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
-          # 手动发布版本无需写入构建缓存
+          # Cache is read-only for manual stable releases
           cache-read-only: true
 
       - name: Verify Keystore
