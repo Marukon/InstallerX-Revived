@@ -204,7 +204,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     implementation(libs.androidx.navigation3.runtime)
-    implementation(libs.androidx.navigation3.ui)
+    //implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.navigationevent) {
         exclude(group = "androidx.navigation", module = "navigationevent-compose")
     }
@@ -251,12 +251,10 @@ dependencies {
     implementation(libs.miuix.blur)
     implementation(libs.miuix.preference)
     implementation(libs.miuix.icons)
+    implementation(libs.miuix.navigation)
     implementation(libs.shapes)
     implementation(libs.capsule)
     implementation(libs.backdrop)
-    // haze
-    implementation(libs.haze)
-    implementation(libs.haze.materials)
 
     // okhttp
     implementation(platform(libs.okhttp.bom))
