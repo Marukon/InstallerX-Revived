@@ -183,7 +183,7 @@ aboutLibraries {
     }
 }
 
-room {
+room3 {
     // Specify the schema directory
     schemaDirectory("$projectDir/schemas")
 }
@@ -216,8 +216,6 @@ dependencies {
 
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
-    implementation(libs.room.ktx)
-    // implementation(libs.work.runtime.ktx)
 
     implementation(libs.ktx.serializationJson)
 
