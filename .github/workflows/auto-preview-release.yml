@@ -11,6 +11,7 @@ on:
       - 'gradle.properties'
       - 'gradle/**'
       - '.github/workflows/auto-preview-release.yml'
+  workflow_dispatch:
 
 jobs:
   build_and_prerelease:
@@ -111,97 +112,38 @@ jobs:
           echo "offline_apk=${NEW_OFFLINE_APK_PATH}" >> $GITHUB_OUTPUT
           echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
 
-      - name: Delete old preview release and tag
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Use regex to find tags ending with a hex hash of 7 or more characters
-          # Stable tags like 26.03 or 26.03.01 will not match this regex
-          LATEST_TAG=$(git tag --list --sort=-creatordate | grep -E '^[0-9]+\.[0-9]+\.[a-f0-9]{7,}$' | head -n 1)
-          if [[ -n "$LATEST_TAG" ]]; then
-            gh release delete "$LATEST_TAG" --yes || echo "No previous preview release found to delete."
-            git push origin --delete "$LATEST_TAG" || echo "No previous preview tag found to delete."
-          else
-            echo "No preview tag to delete."
-          fi
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          # Match pure number stable tags, ignoring those with hex hashes
-          PREV_TAG=$(git tag --list | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n 1)
-          CURR_TAG="${{ steps.rename_apks.outputs.version_tag }}"
+    
 
-          if [ -z "$PREV_TAG" ]; then
-            LOG_RANGE=""
-          else
-            LOG_RANGE="$PREV_TAG..HEAD"
-          fi
 
-          CHANGELOG_LIST=$(git log $LOG_RANGE --pretty=format:"- %s (%an)" | grep -v '^-\s*Merge' | head -n 5)
-          CHANGELOG_COUNT=$(git log $LOG_RANGE --pretty=format:"- %s (%an)" | grep -v '^-\s*Merge' | wc -l)
-          
-          CHANGELOG_BODY_OUTPUT=""
-          if [ -z "$CHANGELOG_LIST" ]; then
-            CHANGELOG_BODY_OUTPUT="No changes since the last stable release."
-          else
-            CHANGELOG_BODY_OUTPUT="$CHANGELOG_LIST"
-          fi
-
-          CHANGELOG_LINK_OUTPUT=""
-          if [ "$CHANGELOG_COUNT" -gt 5 ]; then
-            if [ -z "$PREV_TAG" ]; then
-              COMPARE_URL="https://github.com/${{ github.repository }}/commits/main"
-            else
-              COMPARE_URL="https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${CURR_TAG}"
-            fi
-            CHANGELOG_LINK_OUTPUT="\n\n**Full Changelog:** [\`${PREV_TAG}...${CURR_TAG}\`]($COMPARE_URL)"
-          fi
-          
-          {
-            echo "changelog_body<<EOF"
-            echo -e "$CHANGELOG_BODY_OUTPUT"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
-          {
-            echo "changelog_full_link<<EOF"
-            echo -e "$CHANGELOG_LINK_OUTPUT"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
-          echo "--- Generated Changelog for Release Body ---"
-          echo -e "${CHANGELOG_BODY_OUTPUT}${CHANGELOG_LINK_OUTPUT}"
-
-      - name: Create Latest Preview Release
-        uses: softprops/action-gh-release@v3
-        with:
-          name: "InstallerX Revived Preview (${{ steps.vars.outputs.SHORT_SHA }})"
-          tag_name: "${{ steps.rename_apks.outputs.version_tag }}"
-          target_commitish: ${{ github.sha }}
-          body: |
-            ## 这是自动构建的最新测试版。
-            - **这是一个预发布版本，并非为生产环境准备就绪。**
-            - 我们非常鼓励您分享您的看法！
-            
-            ## This is an automatically built latest Preview release.
-            - **This is a pre-release version and is not intended for production use.**
-            - We appreciate any feedback!
-            
-            **更新日志（Changelog）:**
-            ${{ steps.changelog.outputs.changelog_body }}${{ steps.changelog.outputs.changelog_full_link }}
-          prerelease: true
-          files: |
-            ${{ steps.rename_apks.outputs.online_apk }}
-            ${{ steps.rename_apks.outputs.offline_apk }}
 
       - name: Upload to Telegram
         env:
-          API_ID: ${{ secrets.API_ID }}
-          API_HASH: ${{ secrets.API_HASH }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-          BOT_CI_SESSION: ${{ secrets.BOT_CI_SESSION }}
+          CHAT_ID_1: ${{ secrets.CHAT_ID_1 }}
+          CHAT_ID_2: ${{ secrets.CHAT_ID_2 }}
+        shell: bash
         run: |
-          pip3 install telethon
-          python3 .github/bot.py "${{ steps.rename_apks.outputs.online_apk }}" "${{ steps.rename_apks.outputs.offline_apk }}"
+          ONLINE="${{ steps.rename_apks.outputs.online_apk }}"
+          OFFLINE="${{ steps.rename_apks.outputs.offline_apk }}"
+
+
+          echo "[+] Uploading Online APK to CHAT_ID_1..."
+          curl -F chat_id="$CHAT_ID_1" \
+               -F document=@"$ONLINE" \
+               "https://api.telegram.org/bot$BOT_TOKEN/sendDocument"
+
+          echo "[+] Uploading Offline APK to CHAT_ID_1..."
+          curl -F chat_id="$CHAT_ID_1" \
+               -F document=@"$OFFLINE" \
+               "https://api.telegram.org/bot$BOT_TOKEN/sendDocument"
+
+          echo "[+] Uploading Online APK to CHAT_ID_2..."
+          curl -F chat_id="$CHAT_ID_2" \
+               -F document=@"$ONLINE" \
+               "https://api.telegram.org/bot$BOT_TOKEN/sendDocument"
+
+          echo "[+] Uploading Offline APK to CHAT_ID_2..."
+          curl -F chat_id="$CHAT_ID_2" \
+               -F document=@"$OFFLINE" \
+               "https://api.telegram.org/bot$BOT_TOKEN/sendDocument"
