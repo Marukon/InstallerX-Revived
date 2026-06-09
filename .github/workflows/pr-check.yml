@@ -1,10 +1,6 @@
 name: PR Build and Test Check
 
-on:
-  pull_request:
-    branches:
-      - main
-      - dev
+
 
 # Set the absolute minimum permissions for the GITHUB_TOKEN
 permissions:
