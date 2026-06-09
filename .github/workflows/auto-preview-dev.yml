@@ -1,17 +1,6 @@
 name: Dev Branch Build & Artifact
 
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'weblate-dev'
-    paths:
-      - 'app/**'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - 'gradle.properties'
-      - 'gradle/**'
-      - '.github/workflows/auto-preview-dev.yml'
 
 jobs:
   pre_job:
