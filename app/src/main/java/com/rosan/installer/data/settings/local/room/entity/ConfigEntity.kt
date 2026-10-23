@@ -8,16 +8,16 @@ import androidx.room3.Ignore
 import androidx.room3.PrimaryKey
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.DexoptMode
-import com.rosan.installer.domain.settings.model.config.InstallRequesterMode
 import com.rosan.installer.domain.settings.model.config.InstallMode
 import com.rosan.installer.domain.settings.model.config.InstallReason
+import com.rosan.installer.domain.settings.model.config.InstallRequesterMode
 import com.rosan.installer.domain.settings.model.config.InstallerMode
 import com.rosan.installer.domain.settings.model.config.PackageSource
 import com.rosan.installer.domain.settings.model.config.ToastMode
 
 @Entity(
     tableName = "config",
-    indices = []
+    indices = [],
 )
 data class ConfigEntity(
     @PrimaryKey(autoGenerate = true)
@@ -33,6 +33,8 @@ data class ConfigEntity(
     var customizeAuthorizer: String,
     @ColumnInfo(name = "install_mode")
     var installMode: InstallMode,
+    @ColumnInfo(name = "auto_approve_session", defaultValue = "0")
+    var autoApproveSession: Boolean = false,
     @ColumnInfo(name = "show_toast", defaultValue = "0")
     var toastMode: ToastMode = ToastMode.Disable,
     @ColumnInfo(name = "enable_customize_install_reason", defaultValue = "0")

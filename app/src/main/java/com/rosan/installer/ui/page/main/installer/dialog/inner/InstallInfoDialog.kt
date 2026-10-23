@@ -59,12 +59,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
-import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.core.device.model.Manufacturer
+import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
-import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.model.packageinfo.InstalledAppInfo
+import com.rosan.installer.domain.engine.model.packageinfo.InstalledModuleInfo
 import com.rosan.installer.domain.engine.model.packageinfo.sortedBest
+import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.page.main.installer.InstallerStage
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
@@ -75,18 +76,15 @@ import com.rosan.installer.ui.page.main.installer.dialog.DialogParamsType
 import com.rosan.installer.ui.util.formatSize
 import com.rosan.installer.ui.util.toAndroidVersionName
 import com.rosan.installer.util.toast
-import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 /**
  * Provides info display: Icon, Title, Subtitle (with version logic).
  * Shows comparison if preInstallAppInfo is provided, otherwise shows only new version.
  */
 @Composable
-fun installInfoDialog(
-    viewModel: InstallerViewModel,
-    onTitleExtraClick: () -> Unit = {}
-): DialogParams {
+fun installInfoDialog(viewModel: InstallerViewModel, onTitleExtraClick: () -> Unit = {}): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings = uiState.viewSettings
     val config = uiState.config
@@ -132,7 +130,7 @@ fun installInfoDialog(
                 transitionSpec = {
                     fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(150))
                 },
-                label = "IconLoadAnimation"
+                label = "IconLoadAnimation",
             ) { iconBitmap ->
                 Box(
                     modifier = Modifier
@@ -145,17 +143,17 @@ fun installInfoDialog(
                                 }
                             } else {
                                 Modifier
-                            }
+                            },
                         ),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
-                    if (iconBitmap != null)
+                    if (iconBitmap != null) {
                         Image(
                             bitmap = iconBitmap,
                             modifier = Modifier.fillMaxSize(),
-                            contentDescription = null
+                            contentDescription = null,
                         )
-
+                    }
                 }
             }
         },
@@ -168,7 +166,7 @@ fun installInfoDialog(
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.animateContentSize()
+                modifier = Modifier.animateContentSize(),
             ) {
                 Text(
                     text = displayLabel,
@@ -180,13 +178,14 @@ fun installInfoDialog(
                                 onLongPress = {
                                     // Copy the app name to clipboard on long press
                                     scope.launch {
-                                        val clipData = ClipData.newPlainText("App Name", displayLabel)
+                                        val clipData =
+                                            ClipData.newPlainText("App Name", displayLabel)
                                         clipboard.setClipEntry(clipData.toClipEntry())
                                         context.toast(R.string.copied_format, displayLabel)
                                     }
-                                }
+                                },
                             )
-                        }
+                        },
                 )
                 // Use AnimatedVisibility to show the button with an animation.
                 // When it becomes invisible, it will not take up any space,
@@ -194,7 +193,7 @@ fun installInfoDialog(
                 AnimatedVisibility(
                     visible = stage == InstallerStage.InstallPrepare || stage == InstallerStage.InstallSuccess,
                     enter = fadeIn() + slideInHorizontally { it }, // Slide in from the right
-                    exit = fadeOut() + slideOutHorizontally { it }  // Slide out to the right
+                    exit = fadeOut() + slideOutHorizontally { it }, // Slide out to the right
                 ) {
                     // This inner Row groups the spacer and button so they animate as one unit.
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -206,22 +205,23 @@ fun installInfoDialog(
                                 .background(MaterialTheme.colorScheme.primaryContainer)
                                 .size(24.dp),
                             colors = IconButtonDefaults.iconButtonColors(
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             ),
-                            onClick = onTitleExtraClick
+                            onClick = onTitleExtraClick,
                         ) {
-                            if (isModule)
+                            if (isModule) {
                                 Icon(
                                     imageVector = AppIcons.Xposed,
                                     contentDescription = null,
-                                    modifier = Modifier.padding(4.dp)
+                                    modifier = Modifier.padding(4.dp),
                                 )
-                            else
+                            } else {
                                 Icon(
                                     imageVector = AppIcons.Android,
                                     contentDescription = null,
-                                    modifier = Modifier.padding(4.dp)
+                                    modifier = Modifier.padding(4.dp),
                                 )
+                            }
                         }
                     }
                 }
@@ -248,31 +248,50 @@ fun installInfoDialog(
                                 onLongPress = {
                                     // Clipboard operations are suspend functions now
                                     scope.launch {
-                                        val clipData = ClipData.newPlainText("Package Name", rawPackageName)
+                                        val clipData =
+                                            ClipData.newPlainText("Package Name", rawPackageName)
                                         clipboard.setClipEntry(clipData.toClipEntry())
                                         context.toast(R.string.copied_format, rawPackageName)
                                     }
-                                }
+                                },
                             )
-                        }
+                        },
                 )
 
-                Spacer(modifier = Modifier.size(8.dp))
                 // --- Version Info Display ---
                 when (entityToInstall) {
                     is AppEntity.BaseEntity -> {
                         if (preInstallAppInfo == null) {
+                            Spacer(modifier = Modifier.size(8.dp))
                             // 首次安装或无法获取旧信息: 只显示新版本，不带前缀
                             Text(
                                 text = stringResource(
                                     R.string.installer_version, // Use base version string
                                     entityToInstall.versionName,
-                                    entityToInstall.versionCode
+                                    entityToInstall.versionCode,
                                 ),
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.basicMarquee()
+                                modifier = Modifier.basicMarquee(),
+                            )
+                        } else if (
+                            settings.hideIdenticalComparisons &&
+                            !preInstallAppInfo.isArchived &&
+                            !preInstallAppInfo.isUninstalled &&
+                            preInstallAppInfo.versionName == entityToInstall.versionName &&
+                            preInstallAppInfo.versionCode == entityToInstall.versionCode
+                        ) {
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Text(
+                                text = stringResource(
+                                    R.string.installer_version,
+                                    entityToInstall.versionName,
+                                    entityToInstall.versionCode,
+                                ),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.basicMarquee(),
                             )
                         } else {
+                            Spacer(modifier = Modifier.size(8.dp))
                             //
                             // true = singleLine, false = multiLine
                             val defaultIsSingleLine = settings.versionCompareInSingleLine
@@ -293,11 +312,11 @@ fun installInfoDialog(
                             Box(
                                 modifier = Modifier.clickable(
                                     interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
+                                    indication = null,
                                 ) {
                                     // On every click, toggle the line mode and ALWAYS enable animation
                                     contentState = Pair(!contentState.first, true)
-                                }
+                                },
                             ) {
                                 AnimatedContent(
                                     targetState = contentState,
@@ -306,13 +325,13 @@ fun installInfoDialog(
                                         if (targetState.second) {
                                             // Animate: This is for user clicks
                                             fadeIn(tween(200)) togetherWith fadeOut(tween(200)) using
-                                                    SizeTransform { _, _ -> tween(250) }
+                                                SizeTransform { _, _ -> tween(250) }
                                         } else {
                                             // No animation: This is for initial composition or programmatic changes
                                             fadeIn(tween(0)) togetherWith fadeOut(tween(0))
                                         }
                                     },
-                                    label = "VersionViewAnimation"
+                                    label = "VersionViewAnimation",
                                 ) { state ->
                                     // state is the Pair(isSingleLine, shouldAnimate)
                                     if (state.first) {
@@ -326,25 +345,83 @@ fun installInfoDialog(
                     }
 
                     is AppEntity.ModuleEntity -> {
-                        // For modules, just show the current info without comparison.
-                        Text(
-                            text = stringResource(
-                                R.string.installer_version,
-                                entityToInstall.version,
-                                entityToInstall.versionCode
-                            ),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.basicMarquee()
-                        )
+                        val installedModuleInfo = currentPackage.installedModuleInfo
+                        if (installedModuleInfo == null) {
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Text(
+                                text = stringResource(
+                                    R.string.installer_version,
+                                    entityToInstall.version,
+                                    entityToInstall.versionCode,
+                                ),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.basicMarquee(),
+                            )
+                        } else if (
+                            settings.hideIdenticalComparisons &&
+                            installedModuleInfo.version == entityToInstall.version &&
+                            installedModuleInfo.versionCode == entityToInstall.versionCode
+                        ) {
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Text(
+                                text = stringResource(
+                                    R.string.installer_version,
+                                    entityToInstall.version,
+                                    entityToInstall.versionCode,
+                                ),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.basicMarquee(),
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.size(8.dp))
+                            val defaultIsSingleLine = settings.versionCompareInSingleLine
+                            var contentState by remember {
+                                mutableStateOf(Pair(defaultIsSingleLine, false))
+                            }
+
+                            LaunchedEffect(defaultIsSingleLine) {
+                                if (contentState.first != defaultIsSingleLine) {
+                                    contentState = Pair(defaultIsSingleLine, false)
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier.clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) {
+                                    contentState = Pair(!contentState.first, true)
+                                },
+                            ) {
+                                AnimatedContent(
+                                    targetState = contentState,
+                                    transitionSpec = {
+                                        if (targetState.second) {
+                                            fadeIn(tween(200)) togetherWith fadeOut(tween(200)) using
+                                                SizeTransform { _, _ -> tween(250) }
+                                        } else {
+                                            fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                                        }
+                                    },
+                                    label = "ModuleVersionViewAnimation",
+                                ) { state ->
+                                    if (state.first) {
+                                        ModuleVersionCompareSingleLine(installedModuleInfo, entityToInstall)
+                                    } else {
+                                        ModuleVersionCompareMultiLine(installedModuleInfo, entityToInstall)
+                                    }
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.size(4.dp))
                         Text(
                             text = stringResource(
                                 R.string.installer_author,
-                                entityToInstall.author
+                                entityToInstall.author,
                             ),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.basicMarquee(),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
 
@@ -358,7 +435,7 @@ fun installInfoDialog(
 
                     else -> {
                         AnimatedVisibility(
-                            visible = config.displaySdk
+                            visible = config.displaySdk,
                         ) {
                             Box(
                                 modifier = Modifier
@@ -366,29 +443,32 @@ fun installInfoDialog(
                                     .padding(top = 8.dp)
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
+                                        indication = null,
                                     ) {
                                         sdkContentState = Pair(!sdkContentState.first, true)
-                                    }
+                                    },
                             ) {
                                 AnimatedContent(
                                     targetState = sdkContentState,
                                     transitionSpec = {
                                         if (targetState.second) {
                                             fadeIn(tween(200)) togetherWith fadeOut(tween(200)) using
-                                                    SizeTransform { _, _ -> tween(250) }
+                                                SizeTransform { _, _ -> tween(250) }
                                         } else {
                                             fadeIn(tween(0)) togetherWith fadeOut(tween(0))
                                         }
                                     },
-                                    label = "SdkViewAnimation"
+                                    label = "SdkViewAnimation",
                                 ) { state ->
                                     if (state.first) {
                                         // compact single-line: 使用已有的短标签资源
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center,
-                                            modifier = Modifier.fillMaxWidth()
+                                            horizontalArrangement = Arrangement.spacedBy(
+                                                16.dp,
+                                                Alignment.CenterHorizontally,
+                                            ),
+                                            modifier = Modifier.fillMaxWidth(),
                                         ) {
                                             entityToInstall.minSdk?.let { newMinSdk ->
                                                 SdkInfoCompact(
@@ -397,10 +477,10 @@ fun installInfoDialog(
                                                     oldSdk = preInstallAppInfo?.minSdk?.toString(),
                                                     isUninstalled = preInstallAppInfo?.isUninstalled ?: false,
                                                     isArchived = preInstallAppInfo?.isArchived ?: false,
-                                                    type = "min"
+                                                    hideIdenticalComparison = settings.hideIdenticalComparisons,
+                                                    type = "min",
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.size(16.dp))
                                             entityToInstall.targetSdk?.let { newTargetSdk ->
                                                 SdkInfoCompact(
                                                     shortLabelResId = R.string.installer_package_target_sdk_label_short,
@@ -408,7 +488,8 @@ fun installInfoDialog(
                                                     oldSdk = preInstallAppInfo?.targetSdk?.toString(),
                                                     isUninstalled = preInstallAppInfo?.isUninstalled ?: false,
                                                     isArchived = preInstallAppInfo?.isArchived ?: false,
-                                                    type = "target"
+                                                    hideIdenticalComparison = settings.hideIdenticalComparisons,
+                                                    type = "target",
                                                 )
                                             }
                                         }
@@ -417,7 +498,7 @@ fun installInfoDialog(
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.spacedBy(4.dp),
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier.fillMaxWidth(),
                                         ) {
                                             entityToInstall.minSdk?.let { newMinSdk ->
                                                 SdkInfoExpanded(
@@ -426,7 +507,8 @@ fun installInfoDialog(
                                                     oldSdk = preInstallAppInfo?.minSdk?.toString(),
                                                     isUninstalled = preInstallAppInfo?.isUninstalled ?: false,
                                                     isArchived = preInstallAppInfo?.isArchived ?: false,
-                                                    type = "min"
+                                                    hideIdenticalComparison = settings.hideIdenticalComparisons,
+                                                    type = "min",
                                                 )
                                             }
                                             entityToInstall.targetSdk?.let { newTargetSdk ->
@@ -436,7 +518,8 @@ fun installInfoDialog(
                                                     oldSdk = preInstallAppInfo?.targetSdk?.toString(),
                                                     isUninstalled = preInstallAppInfo?.isUninstalled ?: false,
                                                     isArchived = preInstallAppInfo?.isArchived ?: false,
-                                                    type = "target"
+                                                    hideIdenticalComparison = settings.hideIdenticalComparisons,
+                                                    type = "target",
                                                 )
                                             }
                                         }
@@ -447,53 +530,150 @@ fun installInfoDialog(
                     }
                 }
                 // --- Size Display ---
+                val installedSize = preInstallAppInfo?.packageSize ?: 0L
                 AnimatedVisibility(visible = config.displaySize && totalSize > 0L) {
                     Column {
                         Spacer(modifier = Modifier.size(8.dp))
                         SizeInfoDisplay(
-                            oldSize = preInstallAppInfo?.packageSize ?: 0L,
-                            newSize = totalSize
+                            oldSize = installedSize,
+                            newSize = totalSize,
+                            hideIdenticalComparison = settings.hideIdenticalComparisons,
                         )
                     }
                 }
                 // --- OPPO Info Display ---
-                val showOsdkInfo = (DeviceConfig.currentManufacturer == Manufacturer.OPPO ||
-                        DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS) &&
-                        settings.showOPPOSpecial &&
-                        entityToInstall.sourceType == DataType.APK &&
-                        (entityToInstall as? AppEntity.BaseEntity)?.minOsdkVersion != null
+                val showOsdkInfo = (
+                    DeviceConfig.currentManufacturer == Manufacturer.OPPO ||
+                        DeviceConfig.currentManufacturer == Manufacturer.ONEPLUS
+                    ) &&
+                    settings.showOPPOSpecial &&
+                    entityToInstall.sourceType == DataType.APK &&
+                    (entityToInstall as? AppEntity.BaseEntity)?.minOsdkVersion != null
 
                 AnimatedVisibility(visible = showOsdkInfo) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Spacer(modifier = Modifier.height(8.dp))
                         (entityToInstall as? AppEntity.BaseEntity)?.minOsdkVersion?.let { osdk ->
                             Text(
                                 text = stringResource(R.string.installer_package_minOsdkVersion, osdk),
                                 textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         }
                     }
                 }
             }
-        }
+        },
     )
 }
 
+@Composable
+private fun ModuleVersionCompareMultiLine(installedModuleInfo: InstalledModuleInfo, entityToInstall: AppEntity.ModuleEntity) {
+    val isDowngrade = installedModuleInfo.versionCode?.let { it > entityToInstall.versionCode } == true
+    val isOverwrite = installedModuleInfo.versionCode == entityToInstall.versionCode
+    val statusColor = if (isDowngrade) {
+        MaterialTheme.colorScheme.error
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+
+    val oldVersionFormatted = stringResource(
+        R.string.installer_version_short,
+        installedModuleInfo.version.orEmpty(),
+        installedModuleInfo.versionCode?.toString().orEmpty(),
+    )
+    val newVersionFormatted = stringResource(
+        R.string.installer_version_short,
+        entityToInstall.version,
+        entityToInstall.versionCode,
+    )
+
+    val oldPrefix = stringResource(R.string.old_version_prefix)
+    val newPrefix = if (isDowngrade) {
+        stringResource(R.string.downgrade_version_prefix)
+    } else if (isOverwrite) {
+        stringResource(R.string.overwrite_version_prefix)
+    } else {
+        stringResource(R.string.upgrade_version_prefix)
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = stringResource(
+                R.string.version_with_prefix_format,
+                oldPrefix,
+                oldVersionFormatted,
+            ),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.basicMarquee(),
+        )
+
+        Icon(
+            imageVector = AppIcons.ArrowDropDownFilled,
+            contentDescription = "to",
+            tint = statusColor,
+            modifier = Modifier.size(24.dp),
+        )
+
+        Text(
+            text = stringResource(
+                R.string.version_with_prefix_format,
+                newPrefix,
+                newVersionFormatted,
+            ),
+            color = statusColor,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.basicMarquee(),
+        )
+    }
+}
+
+@Composable
+private fun ModuleVersionCompareSingleLine(installedModuleInfo: InstalledModuleInfo, entityToInstall: AppEntity.ModuleEntity) {
+    val isDowngrade = installedModuleInfo.versionCode?.let { it > entityToInstall.versionCode } == true
+    val color = if (isDowngrade) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    val oldVersionText = stringResource(
+        R.string.installer_version_short,
+        installedModuleInfo.version.orEmpty(),
+        installedModuleInfo.versionCode?.toString().orEmpty(),
+    )
+    val newVersionText = stringResource(
+        R.string.installer_version2,
+        entityToInstall.version,
+        entityToInstall.versionCode,
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
+    ) {
+        Text(text = oldVersionText, textAlign = TextAlign.Center)
+        Icon(
+            imageVector = AppIcons.ArrowRight,
+            contentDescription = "to",
+            tint = color,
+            modifier = Modifier.size(24.dp),
+        )
+        Text(
+            text = newVersionText,
+            color = color,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
 
 /**
  * Composable for displaying version comparison in multiple lines (the original style).
  */
 @Composable
-private fun VersionCompareMultiLine(
-    preInstallAppInfo: InstalledAppInfo,
-    entityToInstall: AppEntity.BaseEntity
-) {
+private fun VersionCompareMultiLine(preInstallAppInfo: InstalledAppInfo, entityToInstall: AppEntity.BaseEntity) {
     // 1. Determine the installation status (downgrade or upgrade/equal)
     val isDowngrade = preInstallAppInfo.versionCode > entityToInstall.versionCode
+    val isOverwrite = preInstallAppInfo.versionCode == entityToInstall.versionCode
 
     // 2. Centralize the color logic based on the status
     val statusColor = if (isDowngrade) {
@@ -513,42 +693,44 @@ private fun VersionCompareMultiLine(
     val oldVersionFormatted = stringResource(
         R.string.installer_version_short,
         oldVersionText,
-        preInstallAppInfo.versionCode
+        preInstallAppInfo.versionCode,
     )
     val newVersionFormatted = stringResource(
         R.string.installer_version_short,
         entityToInstall.versionName,
-        entityToInstall.versionCode
+        entityToInstall.versionCode,
     )
 
     // 5. Resolve the prefixes
     val oldPrefix = stringResource(R.string.old_version_prefix)
     val newPrefix = if (isDowngrade) {
         stringResource(R.string.downgrade_version_prefix)
+    } else if (isOverwrite) {
+        stringResource(R.string.overwrite_version_prefix)
     } else {
         stringResource(R.string.upgrade_version_prefix)
     }
 
     // 6. Build the UI
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             // Old version with prefix
             text = stringResource(
                 R.string.version_with_prefix_format,
                 oldPrefix,
-                oldVersionFormatted
+                oldVersionFormatted,
             ),
             textAlign = TextAlign.Center,
-            modifier = Modifier.basicMarquee()
+            modifier = Modifier.basicMarquee(),
         )
 
         Icon(
             imageVector = AppIcons.ArrowDropDownFilled,
             contentDescription = "to",
             tint = statusColor,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(24.dp),
         )
 
         Text(
@@ -556,11 +738,11 @@ private fun VersionCompareMultiLine(
             text = stringResource(
                 R.string.version_with_prefix_format,
                 newPrefix,
-                newVersionFormatted
+                newVersionFormatted,
             ),
             color = statusColor,
             textAlign = TextAlign.Center,
-            modifier = Modifier.basicMarquee()
+            modifier = Modifier.basicMarquee(),
         )
     }
 }
@@ -569,10 +751,7 @@ private fun VersionCompareMultiLine(
  * Composable for displaying version comparison in a single line (e.g., "1.0 (1) -> 2.0 (2)").
  */
 @Composable
-private fun VersionCompareSingleLine(
-    preInstallAppInfo: InstalledAppInfo,
-    entityToInstall: AppEntity.BaseEntity
-) {
+private fun VersionCompareSingleLine(preInstallAppInfo: InstalledAppInfo, entityToInstall: AppEntity.BaseEntity) {
     val isDowngrade = preInstallAppInfo.versionCode > entityToInstall.versionCode
     val color = if (isDowngrade) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
     val oldVersionNameContent = when {
@@ -583,25 +762,25 @@ private fun VersionCompareSingleLine(
     val oldVersionText = stringResource(
         R.string.installer_version_short,
         oldVersionNameContent,
-        preInstallAppInfo.versionCode
+        preInstallAppInfo.versionCode,
     )
     val newVersionText = stringResource(
         R.string.installer_version2,
         entityToInstall.versionName,
-        entityToInstall.versionCode
+        entityToInstall.versionCode,
     )
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
-        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
+        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
     ) {
         Text(text = oldVersionText, textAlign = TextAlign.Center)
         Icon(
             imageVector = AppIcons.ArrowRight,
             contentDescription = "to",
             tint = color,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(24.dp),
         )
         Text(text = newVersionText, color = color, textAlign = TextAlign.Center)
     }
@@ -614,16 +793,18 @@ private fun SdkInfoCompact(
     oldSdk: String?,
     isUninstalled: Boolean = false,
     isArchived: Boolean = false,
-    type: String
+    hideIdenticalComparison: Boolean,
+    type: String,
 ) {
     val newSdkInt = newSdk.toIntOrNull()
     val oldSdkInt = oldSdk?.toIntOrNull()
 
-    val showComparison = oldSdkInt != null && newSdkInt != null && newSdkInt != oldSdkInt
+    val showComparison = oldSdkInt != null && newSdkInt != null &&
+        (!hideIdenticalComparison || newSdkInt != oldSdkInt)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
+        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
     ) {
         if (showComparison) {
             val isDowngrade = newSdkInt < oldSdkInt
@@ -643,13 +824,13 @@ private fun SdkInfoCompact(
                 imageVector = AppIcons.ArrowRight,
                 contentDescription = "to",
                 tint = color,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
 
             Text(
                 text = newSdk,
                 color = color,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
         } else {
             val textColor = if (type == "min" && newSdkInt != null && newSdkInt > Build.VERSION.SDK_INT) {
@@ -661,7 +842,7 @@ private fun SdkInfoCompact(
             Text(
                 text = newSdkText,
                 color = textColor,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
@@ -679,15 +860,17 @@ private fun SdkInfoExpanded(
     oldSdk: String?,
     isUninstalled: Boolean = false,
     isArchived: Boolean = false,
-    type: String
+    hideIdenticalComparison: Boolean,
+    type: String,
 ) {
     val newSdkInt = newSdk.toIntOrNull()
     val oldSdkInt = oldSdk?.toIntOrNull()
-    val showComparison = oldSdkInt != null && newSdkInt != null && newSdkInt != oldSdkInt
+    val showComparison = oldSdkInt != null && newSdkInt != null &&
+        (!hideIdenticalComparison || newSdkInt != oldSdkInt)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
+        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
     ) {
         val labelPrefix = stringResource(labelPrefixResId)
 
@@ -706,12 +889,12 @@ private fun SdkInfoExpanded(
             when {
                 isArchived -> Text(
                     text = stringResource(R.string.old_version_archived),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
 
                 isUninstalled -> Text(
                     text = stringResource(R.string.old_version_uninstalled),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
 
                 else -> SdkValueWithIcon(sdk = oldSdk, color = MaterialTheme.colorScheme.onSurface)
@@ -723,12 +906,11 @@ private fun SdkInfoExpanded(
                 tint = color,
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
-                    .size(20.dp)
+                    .size(20.dp),
             )
 
             // --- New value ---
             SdkValueWithIcon(sdk = newSdk, color = color)
-
         } else {
             val textColor = if (type == "min" && newSdkInt != null && newSdkInt > Build.VERSION.SDK_INT) {
                 MaterialTheme.colorScheme.error
@@ -744,15 +926,12 @@ private fun SdkInfoExpanded(
 }
 
 @Composable
-private fun SdkValueWithIcon(
-    sdk: String,
-    color: Color
-) {
+private fun SdkValueWithIcon(sdk: String, color: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = sdk,
             color = color,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
         )
 
         Spacer(modifier = Modifier.size(4.dp))
@@ -762,30 +941,27 @@ private fun SdkValueWithIcon(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
                 .background(color.copy(alpha = 0.1f))
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
         ) {
             Icon(
                 imageVector = AppIcons.Android,
                 contentDescription = "Android",
                 tint = color,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(14.dp),
             )
             Spacer(modifier = Modifier.size(2.dp))
             Text(
                 text = sdk.toAndroidVersionName(),
                 color = color,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
             )
         }
     }
 }
 
 @Composable
-private fun SizeInfoDisplay(
-    oldSize: Long,
-    newSize: Long
-) {
-    val showComparison = oldSize > 0L && oldSize != newSize
+private fun SizeInfoDisplay(oldSize: Long, newSize: Long, hideIdenticalComparison: Boolean) {
+    val showComparison = oldSize > 0L && (!hideIdenticalComparison || oldSize != newSize)
     var showDiffOnly by remember { mutableStateOf(false) }
 
     Box(
@@ -793,29 +969,29 @@ private fun SizeInfoDisplay(
             .clickable(
                 enabled = showComparison,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null
+                indication = null,
             ) {
                 showDiffOnly = !showDiffOnly
-            }
+            },
     ) {
         AnimatedContent(
             targetState = showComparison && showDiffOnly,
             transitionSpec = {
                 fadeIn(tween(200)) togetherWith fadeOut(tween(200)) using
-                        SizeTransform { _, _ -> tween(250) }
+                    SizeTransform { _, _ -> tween(250) }
             },
-            label = "SizeDisplayAnimation"
+            label = "SizeDisplayAnimation",
         ) { isDiffMode ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
+                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
             ) {
                 // Label: "Size:"
                 Text(
                     text = stringResource(R.string.installer_package_size_label),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 if (isDiffMode) {
@@ -828,9 +1004,13 @@ private fun SizeInfoDisplay(
 
                     // 2. Manually append the sign based on whether diff is positive or negative
                     val finalString = when {
-                        diff > 0 -> "+$diffString" // Increased
-                        diff < 0 -> "-$diffString" // Decreased
-                        else -> diffString         // Unchanged (0 B)
+                        diff > 0 -> "+$diffString"
+
+                        // Increased
+                        diff < 0 -> "-$diffString"
+
+                        // Decreased
+                        else -> diffString // Unchanged (0 B)
                     }
 
                     // Color logic: Use Primary color for both increase and decrease
@@ -840,7 +1020,7 @@ private fun SizeInfoDisplay(
                         text = finalString,
                         style = MaterialTheme.typography.bodyMedium,
                         color = color,
-                        modifier = Modifier.padding(start = 4.dp)
+                        modifier = Modifier.padding(start = 4.dp),
                     )
                 } else {
                     // --- Full Mode: "35.2 MB -> 42.0 MB" ---
@@ -850,7 +1030,7 @@ private fun SizeInfoDisplay(
                             text = oldSize.formatSize(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(start = 4.dp)
+                            modifier = Modifier.padding(start = 4.dp),
                         )
 
                         Icon(
@@ -859,7 +1039,7 @@ private fun SizeInfoDisplay(
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier
                                 .padding(horizontal = 4.dp)
-                                .size(24.dp)
+                                .size(24.dp),
                         )
                     } else {
                         // Add a spacer to separate the new size from the label when there is no old version
@@ -870,7 +1050,7 @@ private fun SizeInfoDisplay(
                     Text(
                         text = newSize.formatSize(),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }

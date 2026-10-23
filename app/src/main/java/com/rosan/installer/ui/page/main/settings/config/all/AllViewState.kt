@@ -6,18 +6,15 @@ import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.domain.settings.util.ConfigOrder
 import com.rosan.installer.domain.settings.util.OrderType
 
-data class AllViewState(
-    val data: Data = Data(),
-    val userReadScopeTips: Boolean = false,
-) {
+data class AllViewState(val data: Data = Data(), val userReadScopeTips: Boolean = false) {
     data class Data(
         val configs: List<ConfigModel> = emptyList(),
         val configOrder: ConfigOrder = ConfigOrder.Id(OrderType.Ascending),
-        val progress: Progress = Progress.Loading
+        val progress: Progress = Progress.Loading,
     ) {
-        sealed class Progress {
-            data object Loading : Progress()
-            data object Loaded : Progress()
+        sealed interface Progress {
+            data object Loading : Progress
+            data object Loaded : Progress
         }
     }
 }

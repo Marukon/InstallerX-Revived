@@ -1,6 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.domain.session.model
 
 import android.graphics.Bitmap
+import android.os.Process
 
 data class ConfirmationDetails(
     val sessionId: Int,
@@ -12,10 +15,14 @@ data class ConfirmationDetails(
     // A generic label for the related app (either the update owner or the initiator)
     val sourceAppLabel: CharSequence? = null,
     val installerPackageName: String? = null,
+    val installerUid: Int = Process.INVALID_UID,
+    val isCallerVerified: Boolean = false,
+    val requestType: ConfirmationRequestType = ConfirmationRequestType.INSTALL,
+    val isPreApprovalRequested: Boolean = false,
 
     // Flag to determine if this confirmation belongs to our own active installation
     val isSelfSession: Boolean = false,
     // Preserve installing progress for multi install interruption
     val currentProgress: Int = 1,
-    val totalProgress: Int = 1
+    val totalProgress: Int = 1,
 )

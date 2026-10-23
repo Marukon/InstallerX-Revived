@@ -4,7 +4,6 @@
 
 package com.rosan.installer.ui.page.main.settings.preferred.theme
 
-import android.annotation.SuppressLint
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -18,21 +17,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -61,12 +52,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import com.rosan.installer.R
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackAnimation
 import com.rosan.installer.domain.settings.model.preferences.PredictiveBackExitDirection
@@ -75,7 +64,6 @@ import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.main.widget.card.ColorSwatchPreview
-import com.rosan.installer.ui.page.main.widget.dialog.HideLauncherIconWarningDialog
 import com.rosan.installer.ui.page.main.widget.setting.BaseItemContainer
 import com.rosan.installer.ui.page.main.widget.setting.BaseWidget
 import com.rosan.installer.ui.page.main.widget.setting.ExpressiveBackButton
@@ -84,16 +72,14 @@ import com.rosan.installer.ui.page.main.widget.setting.SegmentedColumn
 import com.rosan.installer.ui.page.main.widget.setting.SwitchWidget
 import com.rosan.installer.ui.theme.getMaterial3AppBarColor
 import com.rosan.installer.ui.theme.installerMaterial3BlurEffect
+import com.rosan.installer.ui.theme.material.PresetColors
 import com.rosan.installer.ui.theme.rememberMaterial3BlurBackdrop
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
-@SuppressLint("RestrictedApi")
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ThemeSettingsPage(
-    viewModel: ThemeSettingsViewModel = koinViewModel()
-) {
+fun ThemeSettingsPage(viewModel: ThemeSettingsViewModel = koinViewModel()) {
     val navigator = LocalNavigator.current
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val topAppBarState = rememberTopAppBarState(-154f, -154f) // from debugger
@@ -104,26 +90,15 @@ fun ThemeSettingsPage(
     var showThemeModeDialog by remember { mutableStateOf(false) }
     var showPredictiveBackAnimationDialog by remember { mutableStateOf(false) }
     var showPredictiveBackExitDirectionDialog by remember { mutableStateOf(false) }
-    val transition = LocalNavAnimatedContentScope.current.transition
 
     if (showPredictiveBackAnimationDialog) {
         PredictiveBackAnimationDialog(
             currentAnimation = uiState.predictiveBackAnimation,
             onDismiss = { showPredictiveBackAnimationDialog = false },
             onSelect = { animation ->
-                // Hey Google
-                // Why you keep playing the animation even we are already play completed?
-
-                // This is very dirty, We are using RestrictedApi, but we don't have other choice
-                transition.setPlaytimeAfterInitialAndTargetStateEstablished(
-                    transition.targetState,
-                    transition.targetState,
-                    transition.playTimeNanos
-                )
-
                 viewModel.dispatch(ThemeSettingsAction.SetPredictiveBackAnimation(animation))
                 showPredictiveBackAnimationDialog = false
-            }
+            },
         )
     }
 
@@ -134,7 +109,7 @@ fun ThemeSettingsPage(
             onSelect = { direction ->
                 viewModel.dispatch(ThemeSettingsAction.SetPredictiveBackExitDirection(direction))
                 showPredictiveBackExitDirectionDialog = false
-            }
+            },
         )
     }
 
@@ -145,7 +120,7 @@ fun ThemeSettingsPage(
             onSelect = { style ->
                 viewModel.dispatch(ThemeSettingsAction.SetPaletteStyle(style))
                 showPaletteDialog = false
-            }
+            },
         )
     }
 
@@ -156,21 +131,9 @@ fun ThemeSettingsPage(
             onSelect = { mode ->
                 viewModel.dispatch(ThemeSettingsAction.SetThemeMode(mode))
                 showThemeModeDialog = false
-            }
+            },
         )
     }
-
-    HideLauncherIconWarningDialog(
-        show = showHideLauncherIconDialog,
-        onDismiss = { showHideLauncherIconDialog = false },
-        onConfirm = {
-            showHideLauncherIconDialog = false
-            viewModel.dispatch(ThemeSettingsAction.ChangeShowLauncherIcon(false))
-        }
-    )
-
-    val layoutDirection = LocalLayoutDirection.current
-    val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
 
     val backdrop = rememberMaterial3BlurBackdrop(uiState.useBlur)
 
@@ -196,8 +159,8 @@ fun ThemeSettingsPage(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backdrop.getMaterial3AppBarColor(),
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    scrolledContainerColor = backdrop.getMaterial3AppBarColor()
-                )
+                    scrolledContainerColor = backdrop.getMaterial3AppBarColor(),
+                ),
             )
         },
     ) { paddingValues ->
@@ -205,17 +168,12 @@ fun ThemeSettingsPage(
             modifier = Modifier
                 .fillMaxSize()
                 .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-                bottom = paddingValues.calculateBottomPadding()
-            )
+            contentPadding = paddingValues,
         ) {
             // --- Group 1: UI Style Selection ---
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.theme_settings_ui_style)
+                    title = stringResource(R.string.theme_settings_ui_style),
                 ) {
                     // Option 1: Google UI
                     item {
@@ -230,7 +188,7 @@ fun ThemeSettingsPage(
                             description = stringResource(R.string.theme_settings_google_ui_desc),
                             iconPlaceholder = false,
                             selected = selected,
-                            onClick = onClick
+                            onClick = onClick,
                         )
                     }
                     // Option 2: MIUIX UI
@@ -246,7 +204,7 @@ fun ThemeSettingsPage(
                             description = stringResource(R.string.theme_settings_miuix_ui_desc),
                             iconPlaceholder = false,
                             selected = selected,
-                            onClick = onClick
+                            onClick = onClick,
                         )
                     }
                     // Option 3: Floating Bottom Bar
@@ -258,7 +216,7 @@ fun ThemeSettingsPage(
                             checked = uiState.useAppleFloatingBar,
                             onCheckedChange = {
                                 viewModel.dispatch(ThemeSettingsAction.SetUseAppleFloatingBar(it))
-                            }
+                            },
                         )
                     }
                 }
@@ -267,7 +225,7 @@ fun ThemeSettingsPage(
             // --- Group 2: Google UI Options ---
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.theme_settings_google_ui)
+                    title = stringResource(R.string.theme_settings_google_ui),
                 ) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         item {
@@ -276,7 +234,7 @@ fun ThemeSettingsPage(
                                 title = stringResource(R.string.theme_settings_use_blur),
                                 description = stringResource(R.string.theme_settings_use_blur_desc),
                                 checked = uiState.useBlur,
-                                onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetUseBlur(it)) }
+                                onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetUseBlur(it)) },
                             )
                         }
                     }
@@ -289,7 +247,7 @@ fun ThemeSettingsPage(
                                 ThemeMode.DARK -> stringResource(R.string.theme_settings_theme_mode_dark)
                                 ThemeMode.SYSTEM -> stringResource(R.string.theme_settings_theme_mode_system)
                             },
-                            onClick = { showThemeModeDialog = true }
+                            onClick = { showThemeModeDialog = true },
                         )
                     }
                     item {
@@ -297,7 +255,7 @@ fun ThemeSettingsPage(
                             icon = AppIcons.Palette,
                             title = stringResource(R.string.theme_settings_palette_style),
                             description = uiState.paletteStyle.displayName,
-                            onClick = { showPaletteDialog = true }
+                            onClick = { showPaletteDialog = true },
                         )
                     }
                     item { ColorSpecSelector(viewModel) }
@@ -307,7 +265,7 @@ fun ThemeSettingsPage(
                             title = stringResource(R.string.theme_settings_dynamic_color),
                             description = stringResource(R.string.theme_settings_dynamic_color_desc),
                             checked = uiState.useDynamicColor,
-                            onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetUseDynamicColor(it)) }
+                            onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetUseDynamicColor(it)) },
                         )
                     }
                     item {
@@ -316,7 +274,7 @@ fun ThemeSettingsPage(
                             title = stringResource(R.string.theme_settings_dynamic_color_follow_icon),
                             description = stringResource(R.string.theme_settings_dynamic_color_follow_icon_desc),
                             checked = uiState.useDynColorFollowPkgIcon,
-                            onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetDynColorFollowPkgIcon(it)) }
+                            onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.SetDynColorFollowPkgIcon(it)) },
                         )
                     }
                     // Conditional item for Live Activity
@@ -329,10 +287,10 @@ fun ThemeSettingsPage(
                             onCheckedChange = {
                                 viewModel.dispatch(
                                     ThemeSettingsAction.SetDynColorFollowPkgIconForLiveActivity(
-                                        it
-                                    )
+                                        it,
+                                    ),
                                 )
-                            }
+                            },
                         )
                     }
                 }
@@ -343,19 +301,19 @@ fun ThemeSettingsPage(
                 AnimatedVisibility(
                     visible = !uiState.useDynamicColor || Build.VERSION.SDK_INT < Build.VERSION_CODES.S,
                     enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)) +
-                            expandVertically(animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)),
+                        expandVertically(animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)),
                     exit = fadeOut(animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)) +
-                            shrinkVertically(animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing))
+                        shrinkVertically(animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)),
                 ) {
                     SegmentedColumn(
-                        title = stringResource(R.string.theme_settings_theme_color)
+                        title = stringResource(R.string.theme_settings_theme_color),
                     ) {
                         item {
                             BaseItemContainer {
                                 BoxWithConstraints(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 16.dp)
+                                        .padding(horizontal = 12.dp, vertical = 16.dp),
                                 ) {
                                     val itemMinWidth = 88.dp
                                     val columns = (this.maxWidth / itemMinWidth).toInt().coerceAtLeast(1)
@@ -363,28 +321,38 @@ fun ThemeSettingsPage(
 
                                     Column(
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
                                         chunkedColors.forEach { rowItems ->
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.Center
+                                                horizontalArrangement = Arrangement.Center,
                                             ) {
                                                 rowItems.forEach { rawColor ->
                                                     Box(
                                                         modifier = Modifier.weight(1f),
-                                                        contentAlignment = Alignment.Center
+                                                        contentAlignment = Alignment.Center,
                                                     ) {
                                                         ColorSwatchPreview(
                                                             rawColor = rawColor,
                                                             currentStyle = uiState.paletteStyle,
                                                             colorSpec = uiState.colorSpec,
-                                                            textStyle = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
+                                                            textStyle = MaterialTheme.typography.labelMedium.copy(
+                                                                fontSize = 13.sp,
+                                                            ),
                                                             textColor = MaterialTheme.colorScheme.onSurface,
-                                                            isSelected = uiState.seedColor == rawColor.color &&
-                                                                    !(uiState.useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S),
+                                                            isSelected =
+                                                                uiState.seedColor == rawColor.color,
                                                         ) {
-                                                            viewModel.dispatch(ThemeSettingsAction.SetSeedColor(rawColor.color))
+                                                            viewModel.dispatch(
+                                                                ThemeSettingsAction.SetSeedColor(
+                                                                    rawColor.color,
+                                                                    uiState.useDynamicColor &&
+                                                                        Build.VERSION.SDK_INT < Build.VERSION_CODES.S &&
+                                                                        // If useDynamicColor is true but availableColors is PresetColors, the wallpaperColors have no valid values
+                                                                        uiState.availableColors != PresetColors,
+                                                                ),
+                                                            )
                                                         }
                                                     }
                                                 }
@@ -409,12 +377,12 @@ fun ThemeSettingsPage(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 item {
                     SegmentedColumn(
-                        title = stringResource(R.string.theme_settings_predictive_back)
+                        title = stringResource(R.string.theme_settings_predictive_back),
                     ) {
                         item { PredictiveBackAnimationWidget(uiState) { showPredictiveBackAnimationDialog = true } }
                         item(
-                            animatedVisibility = uiState.predictiveBackAnimation == PredictiveBackAnimation.Scale ||
-                                    uiState.predictiveBackAnimation == PredictiveBackAnimation.AOSP
+                            animatedVisibility =
+                                uiState.predictiveBackAnimation == PredictiveBackAnimation.Scale,
                         ) {
                             PredictiveBackAnimationDirectionWidget(uiState) { showPredictiveBackExitDirectionDialog = true }
                         }
@@ -425,7 +393,7 @@ fun ThemeSettingsPage(
             // --- Group 5: Package Icons ---
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.theme_settings_package_icons)
+                    title = stringResource(R.string.theme_settings_package_icons),
                 ) {
                     item {
                         SwitchWidget(
@@ -433,46 +401,17 @@ fun ThemeSettingsPage(
                             title = stringResource(R.string.theme_settings_prefer_system_icon),
                             description = stringResource(R.string.theme_settings_prefer_system_icon_desc),
                             checked = uiState.preferSystemIcon,
-                            onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.ChangePreferSystemIcon(it)) }
+                            onCheckedChange = { viewModel.dispatch(ThemeSettingsAction.ChangePreferSystemIcon(it)) },
                         )
                     }
                 }
             }
-
-            // --- Group 6: Launcher Icons ---
-            item {
-                SegmentedColumn(
-                    title = stringResource(R.string.theme_settings_launcher_icons)
-                ) {
-                    item {
-                        SwitchWidget(
-                            icon = AppIcons.Launcher,
-                            title = stringResource(R.string.theme_settings_hide_launcher_icon),
-                            description = stringResource(R.string.theme_settings_hide_launcher_icon_desc),
-                            checked = !uiState.showLauncherIcon,
-                            onCheckedChange = { newCheckedState ->
-                                if (newCheckedState) {
-                                    showHideLauncherIconDialog = true
-                                } else {
-                                    viewModel.dispatch(ThemeSettingsAction.ChangeShowLauncherIcon(true))
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }
 
 @Composable
-fun PaletteStyleDialog(
-    currentStyle: PaletteStyle,
-    onDismiss: () -> Unit,
-    onSelect: (PaletteStyle) -> Unit
-) {
+fun PaletteStyleDialog(currentStyle: PaletteStyle, onDismiss: () -> Unit, onSelect: (PaletteStyle) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.theme_settings_palette_style_desc)) },
@@ -484,11 +423,11 @@ fun PaletteStyleDialog(
                             .fillMaxWidth()
                             .clickable { onSelect(style) }
                             .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
                             selected = (style == currentStyle),
-                            onClick = { onSelect(style) }
+                            onClick = { onSelect(style) },
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(style.displayName)
@@ -500,7 +439,7 @@ fun PaletteStyleDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.close))
             }
-        }
+        },
     )
 }
 
@@ -508,7 +447,7 @@ fun PaletteStyleDialog(
 fun PredictiveBackAnimationDialog(
     currentAnimation: PredictiveBackAnimation,
     onDismiss: () -> Unit,
-    onSelect: (PredictiveBackAnimation) -> Unit
+    onSelect: (PredictiveBackAnimation) -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -518,21 +457,27 @@ fun PredictiveBackAnimationDialog(
                 PredictiveBackAnimation.entries.forEach { animation ->
                     val animationText = when (animation) {
                         PredictiveBackAnimation.None -> stringResource(R.string.theme_settings_predictive_back_animation_none)
+
                         PredictiveBackAnimation.AOSP -> stringResource(R.string.theme_settings_predictive_back_animation_aosp)
+
                         PredictiveBackAnimation.MIUIX -> stringResource(R.string.theme_settings_predictive_back_animation_miuix)
+
                         PredictiveBackAnimation.Scale -> stringResource(R.string.theme_settings_predictive_back_animation_scale)
-                        PredictiveBackAnimation.Classic -> stringResource(R.string.theme_settings_predictive_back_animation_ksu_classic)
+
+                        PredictiveBackAnimation.Classic -> stringResource(
+                            R.string.theme_settings_predictive_back_animation_ksu_classic,
+                        )
                     }
                     Row(
                         Modifier
                             .fillMaxWidth()
                             .clickable { onSelect(animation) }
                             .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
                             selected = (animation == currentAnimation),
-                            onClick = { onSelect(animation) }
+                            onClick = { onSelect(animation) },
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(animationText)
@@ -544,7 +489,7 @@ fun PredictiveBackAnimationDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.close))
             }
-        }
+        },
     )
 }
 
@@ -552,7 +497,7 @@ fun PredictiveBackAnimationDialog(
 fun PredictiveBackExitDirectionDialog(
     currentDirection: PredictiveBackExitDirection,
     onDismiss: () -> Unit,
-    onSelect: (PredictiveBackExitDirection) -> Unit
+    onSelect: (PredictiveBackExitDirection) -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -561,20 +506,28 @@ fun PredictiveBackExitDirectionDialog(
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 PredictiveBackExitDirection.entries.forEach { direction ->
                     val directionText = when (direction) {
-                        PredictiveBackExitDirection.FOLLOW_GESTURE -> stringResource(R.string.theme_settings_predictive_back_exit_direction_follow_gesture)
-                        PredictiveBackExitDirection.ALWAYS_RIGHT -> stringResource(R.string.theme_settings_predictive_back_exit_direction_always_right)
-                        PredictiveBackExitDirection.ALWAYS_LEFT -> stringResource(R.string.theme_settings_predictive_back_exit_direction_always_left)
+                        PredictiveBackExitDirection.FOLLOW_GESTURE -> stringResource(
+                            R.string.theme_settings_predictive_back_exit_direction_follow_gesture,
+                        )
+
+                        PredictiveBackExitDirection.ALWAYS_RIGHT -> stringResource(
+                            R.string.theme_settings_predictive_back_exit_direction_always_right,
+                        )
+
+                        PredictiveBackExitDirection.ALWAYS_LEFT -> stringResource(
+                            R.string.theme_settings_predictive_back_exit_direction_always_left,
+                        )
                     }
                     Row(
                         Modifier
                             .fillMaxWidth()
                             .clickable { onSelect(direction) }
                             .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
                             selected = (direction == currentDirection),
-                            onClick = { onSelect(direction) }
+                            onClick = { onSelect(direction) },
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(directionText)
@@ -586,16 +539,12 @@ fun PredictiveBackExitDirectionDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.close))
             }
-        }
+        },
     )
 }
 
 @Composable
-fun ThemeModeDialog(
-    currentMode: ThemeMode,
-    onDismiss: () -> Unit,
-    onSelect: (ThemeMode) -> Unit
-) {
+fun ThemeModeDialog(currentMode: ThemeMode, onDismiss: () -> Unit, onSelect: (ThemeMode) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.theme_settings_theme_mode_desc)) },
@@ -612,11 +561,11 @@ fun ThemeModeDialog(
                             .fillMaxWidth()
                             .clickable { onSelect(mode) }
                             .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
                             selected = (mode == currentMode),
-                            onClick = { onSelect(mode) }
+                            onClick = { onSelect(mode) },
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(modeText)
@@ -628,6 +577,6 @@ fun ThemeModeDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.close))
             }
-        }
+        },
     )
 }

@@ -1,5 +1,6 @@
 package com.rosan.installer.ui.page.miuix.installer.sheetcontent
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -20,18 +21,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.ui.page.main.installer.InstallerStage
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
+import com.rosan.installer.ui.page.miuix.widgets.ProgressButton
+import com.rosan.installer.ui.page.miuix.widgets.ProgressButtonDefaults
 import com.rosan.installer.ui.util.isGestureNavigation
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.patched.ProgressButton
-import top.yukonga.miuix.kmp.basic.patched.ProgressButtonDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 
 @Composable
 fun InstallPreparingContent(
     viewModel: InstallerViewModel,
-    onBackground: () -> Unit
+    onBackground: () -> Unit,
+    @StringRes descriptionRes: Int = R.string.installer_preparing_desc,
+    descriptionText: String? = null,
+    @StringRes buttonTextRes: Int = R.string.loading,
+    showButton: Boolean = true,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val stage = uiState.stage
@@ -45,54 +50,57 @@ fun InstallPreparingContent(
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = tween(durationMillis = 300),
-        label = "ProgressAnimation"
+        label = "ProgressAnimation",
     )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.5f)
+            .fillMaxHeight(0.5f),
     ) {
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(bottom = 100.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             InfiniteProgressIndicator()
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = stringResource(R.string.installer_preparing_desc),
+                text = descriptionText ?: stringResource(descriptionRes),
                 color = MiuixTheme.colorScheme.onSurface,
-                style = MiuixTheme.textStyles.body1
+                style = MiuixTheme.textStyles.body1,
             )
         }
 
-        val contentColor = if (animatedProgress < 0.45f)
+        val contentColor = if (animatedProgress < 0.45f) {
             if (isDynamicColor) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSecondaryVariant
-        else
+        } else {
             MiuixTheme.colorScheme.onPrimary
+        }
 
-        ProgressButton(
-            progress = animatedProgress,
-            onClick = onBackground,
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = if (isGestureNavigation()) 24.dp else 0.dp),
-            colors = ProgressButtonDefaults.progressButtonColors(
-                trackColor = if (isDynamicColor) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.secondaryVariant,
-                progressColor = MiuixTheme.colorScheme.primary,
-                contentColor = contentColor
-            )
-        ) {
-            Text(
-                color = contentColor,
-                text = stringResource(R.string.loading)
-            )
+        if (showButton) {
+            ProgressButton(
+                progress = animatedProgress,
+                onClick = onBackground,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = if (isGestureNavigation()) 24.dp else 0.dp),
+                colors = ProgressButtonDefaults.progressButtonColors(
+                    trackColor = if (isDynamicColor) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.secondaryVariant,
+                    progressColor = MiuixTheme.colorScheme.primary,
+                    contentColor = contentColor,
+                ),
+            ) {
+                Text(
+                    color = contentColor,
+                    text = stringResource(buttonTextRes),
+                )
+            }
         }
     }
 }

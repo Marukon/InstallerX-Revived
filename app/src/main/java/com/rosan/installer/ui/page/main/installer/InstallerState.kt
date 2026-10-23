@@ -6,8 +6,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.session.model.UninstallInfo
-import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.domain.settings.model.app.NamedPackage
+import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.domain.settings.model.preferences.RootMode
 
 /**
@@ -22,6 +22,7 @@ data class InstallerState(
     val showMiuixSheetRightActionSettings: Boolean = false,
     val showMiuixPermissionList: Boolean = false,
     val navigatedFromPrepareToChoice: Boolean = false,
+    val isConfirmationSubmitting: Boolean = false,
     // Used to temporarily override the persistent setting during this session
     val tempShowOPPOSpecial: Boolean? = null,
     val tempLabShowFilePath: Boolean? = null,
@@ -30,6 +31,7 @@ data class InstallerState(
     // Visual data
     val currentPackageName: String? = null,
     val initiatorAppLabel: String? = null,
+    val unknownSourcePermissionAppLabel: String? = null,
     val displayIcons: Map<String, ImageBitmap?> = emptyMap(),
     val seedColor: Color? = null,
 
@@ -45,7 +47,7 @@ data class InstallerState(
     val uiUninstallInfo: UninstallInfo? = null,
 
     // Error State
-    val error: Throwable = Throwable()
+    val error: Throwable = Throwable(),
 ) {
     /**
      * Determines if the dialog can be dismissed by tapping the scrim.
@@ -57,12 +59,19 @@ data class InstallerState(
             is InstallerStage.Resolving,
             is InstallerStage.InstallExtendedMenu,
             is InstallerStage.InstallChoice,
-            is InstallerStage.Uninstalling -> false
+            is InstallerStage.Uninstalling,
+            is InstallerStage.InstallConfirm,
+            is InstallerStage.Unarchiving,
+            -> false
 
             is InstallerStage.InstallingModule -> stage.isFinished
+
             is InstallerStage.InstallPrepare -> !(showMiuixSheetRightActionSettings || showMiuixPermissionList)
+
             is InstallerStage.Preparing,
-            is InstallerStage.Installing -> !viewSettings.disableNotificationOnDismiss
+            is InstallerStage.InstallWaitingUnknownSource,
+            is InstallerStage.Installing,
+            -> !viewSettings.disableNotificationOnDismiss
 
             else -> true
         }

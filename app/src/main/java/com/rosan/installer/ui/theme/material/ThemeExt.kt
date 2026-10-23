@@ -8,11 +8,11 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
+import com.materialkolor.PaletteStyle as MaterialKolorPaletteStyle
+import com.materialkolor.dynamiccolor.ColorSpec
+import com.materialkolor.material3.dynamicColorScheme
 import com.rosan.installer.domain.settings.model.preferences.theme.PaletteStyle
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeColorSpec
-import com.materialkolor.dynamicColorScheme
-import com.materialkolor.dynamiccolor.ColorSpec
-import com.materialkolor.PaletteStyle as MaterialKolorPaletteStyle
 
 @Stable
 fun dynamicColorScheme(
@@ -20,7 +20,7 @@ fun dynamicColorScheme(
     isDark: Boolean,
     style: PaletteStyle = PaletteStyle.TonalSpot,
     contrastLevel: Double = 0.0,
-    colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2025
+    colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2025,
 ): ColorScheme {
     // Map local domain PaletteStyle to materialkolor's PaletteStyle
     val mkStyle = when (style) {
@@ -33,11 +33,12 @@ fun dynamicColorScheme(
         PaletteStyle.Monochrome -> MaterialKolorPaletteStyle.Monochrome
         PaletteStyle.Fidelity -> MaterialKolorPaletteStyle.Fidelity
         PaletteStyle.Content -> MaterialKolorPaletteStyle.Content
+        PaletteStyle.Cmf -> MaterialKolorPaletteStyle.Cmf()
     }
 
-    // Apply SPEC_2025 only if explicitly requested AND supported by the style
-    val specVersion = when (colorSpec) {
-        ThemeColorSpec.SPEC_2025 -> if (style.supportsSpec2025) ColorSpec.SpecVersion.SPEC_2025 else ColorSpec.SpecVersion.SPEC_2021
+    val specVersion = when (style.effectiveSpec(colorSpec)) {
+        ThemeColorSpec.SPEC_2026 -> ColorSpec.SpecVersion.SPEC_2026
+        ThemeColorSpec.SPEC_2025 -> ColorSpec.SpecVersion.SPEC_2025
         ThemeColorSpec.SPEC_2021 -> ColorSpec.SpecVersion.SPEC_2021
     }
 
@@ -47,7 +48,7 @@ fun dynamicColorScheme(
         isDark = isDark,
         style = mkStyle,
         contrastLevel = contrastLevel,
-        specVersion = specVersion
+        specVersion = specVersion,
     )
 }
 
@@ -62,7 +63,7 @@ fun ColorScheme.animateAsState(): ColorScheme {
     fun animateColor(color: Color): Color = animateColorAsState(
         targetValue = color,
         animationSpec = spring(),
-        label = "theme_color_animation"
+        label = "theme_color_animation",
     ).value
 
     return ColorScheme(
@@ -115,6 +116,6 @@ fun ColorScheme.animateAsState(): ColorScheme {
         tertiaryFixed = animateColor(tertiaryFixed),
         tertiaryFixedDim = animateColor(tertiaryFixedDim),
         onTertiaryFixed = animateColor(onTertiaryFixed),
-        onTertiaryFixedVariant = animateColor(onTertiaryFixedVariant)
+        onTertiaryFixedVariant = animateColor(onTertiaryFixedVariant),
     )
 }

@@ -9,14 +9,9 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -42,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -57,6 +50,7 @@ import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.navigation.Route
 import com.rosan.installer.ui.page.main.widget.dialog.ErrorDisplayDialog
+import com.rosan.installer.ui.page.main.widget.dialog.HideLauncherIconWarningDialog
 import com.rosan.installer.ui.page.main.widget.setting.BaseWidget
 import com.rosan.installer.ui.page.main.widget.setting.NavigationItemWidget
 import com.rosan.installer.ui.page.main.widget.setting.SegmentedColumn
@@ -80,7 +74,6 @@ fun PreferredPage(
     viewModel: PreferredViewModel = koinViewModel(),
     title: String,
     outerPadding: PaddingValues = PaddingValues(0.dp),
-    windowInsetsSides: WindowInsetsSides? = null
 ) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
@@ -105,13 +98,14 @@ fun PreferredPage(
     var pendingExportContent by remember { mutableStateOf<String?>(null) }
     var pendingRestorePreview by remember { mutableStateOf<BackupRestorePreview?>(null) }
     var showRestoreConfirmDialog by remember { mutableStateOf(false) }
+    var showHideLauncherIconDialog by remember { mutableStateOf(false) }
     var backupValidationErrorText by remember { mutableStateOf<String?>(null) }
 
     val detailLabel = stringResource(id = R.string.details)
     val coroutineScope = rememberCoroutineScope()
 
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         val content = pendingExportContent ?: return@rememberLauncherForActivityResult
         if (uri == null) {
@@ -131,7 +125,7 @@ fun PreferredPage(
     }
 
     val restoreLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         coroutineScope.launch {
@@ -157,7 +151,7 @@ fun PreferredPage(
                     val snackbarResult = snackBarHostState.showSnackbar(
                         message = context.getString(event.titleResId),
                         actionLabel = detailLabel,
-                        duration = SnackbarDuration.Short
+                        duration = SnackbarDuration.Short,
                     )
                     if (snackbarResult == SnackbarResult.ActionPerformed) {
                         errorDialogInfo = event
@@ -189,8 +183,6 @@ fun PreferredPage(
         }
     }
 
-    val layoutDirection = LocalLayoutDirection.current
-
     val backdrop = rememberMaterial3BlurBackdrop(useBlur)
 
     Scaffold(
@@ -198,31 +190,27 @@ fun PreferredPage(
             .nestedScroll(scrollBehavior.nestedScrollConnection)
             .fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        contentWindowInsets = windowInsetsSides?.let { ScaffoldDefaults.contentWindowInsets.only(it) }
-            ?: ScaffoldDefaults.contentWindowInsets,
         topBar = {
             LargeFlexibleTopAppBar(
                 modifier = Modifier.installerMaterial3BlurEffect(backdrop),
-                windowInsets = windowInsetsSides?.let { TopAppBarDefaults.windowInsets.only(it) }
-                    ?: TopAppBarDefaults.windowInsets,
                 title = {
                     Text(
                         text = title,
-                        modifier = Modifier.padding(start = 12.dp)
+                        modifier = Modifier.padding(start = 12.dp),
                     )
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backdrop.getMaterial3AppBarColor(),
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    scrolledContainerColor = backdrop.getMaterial3AppBarColor()
-                )
+                    scrolledContainerColor = backdrop.getMaterial3AppBarColor(),
+                ),
             )
         },
         snackbarHost = {
             SwipeableSnackbarHost(
                 modifier = Modifier.padding(bottom = outerPadding.calculateBottomPadding()),
-                hostState = snackBarHostState
+                hostState = snackBarHostState,
             )
         },
     ) { paddingValues ->
@@ -230,21 +218,12 @@ fun PreferredPage(
             modifier = Modifier
                 .fillMaxSize()
                 .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
-            contentPadding = PaddingValues(
-                start = paddingValues.calculateStartPadding(layoutDirection) + outerPadding.calculateStartPadding(
-                    layoutDirection
-                ),
-                top = paddingValues.calculateTopPadding(),
-                end = paddingValues.calculateEndPadding(layoutDirection) + outerPadding.calculateEndPadding(
-                    layoutDirection
-                ),
-                bottom = outerPadding.calculateBottomPadding()
-            )
+            contentPadding = paddingValues + outerPadding,
         ) {
             // --- Global Settings Group ---
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.personalization)
+                    title = stringResource(R.string.personalization),
                 ) {
                     item {
                         NavigationItemWidget(
@@ -253,7 +232,7 @@ fun PreferredPage(
                             description = stringResource(R.string.theme_settings_desc),
                             onClick = {
                                 navigator.push(Route.Theme)
-                            }
+                            },
                         )
                     }
                     item {
@@ -263,7 +242,7 @@ fun PreferredPage(
                             description = stringResource(R.string.installer_settings_desc),
                             onClick = {
                                 navigator.push(Route.InstallerGlobal)
-                            }
+                            },
                         )
                     }
                     item {
@@ -273,7 +252,7 @@ fun PreferredPage(
                             description = stringResource(R.string.uninstaller_settings_desc),
                             onClick = {
                                 navigator.push(Route.UninstallerGlobal)
-                            }
+                            },
                         )
                     }
                 }
@@ -282,19 +261,41 @@ fun PreferredPage(
             // --- Basic Settings Group ---
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.basic)
+                    title = stringResource(R.string.basic),
                 ) {
+                    item {
+                        SwitchWidget(
+                            icon = AppIcons.Network,
+                            title = stringResource(R.string.network_settings),
+                            description = stringResource(
+                                if (uiState.allowInternetAccess) {
+                                    R.string.network_settings_internet_access_enabled_desc
+                                } else {
+                                    R.string.network_settings_internet_access_disabled_desc
+                                },
+                            ),
+                            checked = uiState.allowInternetAccess,
+                            onClick = { navigator.push(Route.Network) },
+                            trailingDivider = true,
+                            onCheckedChange = {
+                                viewModel.dispatch(PreferredViewAction.ChangeInternetAccess(it))
+                            },
+                        )
+                    }
                     item {
                         val isError = uiState.authorizer == Authorizer.Dhizuku
                         SwitchWidget(
                             icon = AppIcons.DisableAdbVerify,
                             title = stringResource(R.string.disable_adb_install_verify),
-                            description = if (!isError) stringResource(R.string.disable_adb_install_verify_desc)
-                            else stringResource(R.string.disable_adb_install_verify_not_support_dhizuku_desc),
+                            description = if (!isError) {
+                                stringResource(R.string.disable_adb_install_verify_desc)
+                            } else {
+                                stringResource(R.string.disable_adb_install_verify_not_support_dhizuku_desc)
+                            },
                             checked = !uiState.adbVerifyEnabled,
                             isError = isError,
                             enabled = uiState.authorizer != Authorizer.Dhizuku &&
-                                    uiState.authorizer != Authorizer.None
+                                uiState.authorizer != Authorizer.None,
                         ) { viewModel.dispatch(PreferredViewAction.SetAdbVerifyEnabledState(!it)) }
                     }
                     item {
@@ -302,17 +303,35 @@ fun PreferredPage(
                         SwitchWidget(
                             icon = AppIcons.BatteryOptimization,
                             title = stringResource(R.string.ignore_battery_optimizations),
-                            description = if (enabled) stringResource(R.string.ignore_battery_optimizations_desc)
-                            else stringResource(R.string.ignore_battery_optimizations_desc_disabled),
+                            description = if (enabled) {
+                                stringResource(R.string.ignore_battery_optimizations_desc)
+                            } else {
+                                stringResource(R.string.ignore_battery_optimizations_desc_disabled)
+                            },
                             checked = uiState.isIgnoringBatteryOptimizations,
                             enabled = enabled,
                         ) { viewModel.dispatch(PreferredViewAction.RequestIgnoreBatteryOptimization) }
+                    }
+                    item {
+                        SwitchWidget(
+                            icon = AppIcons.Launcher,
+                            title = stringResource(R.string.theme_settings_hide_launcher_icon),
+                            description = stringResource(R.string.theme_settings_hide_launcher_icon_desc),
+                            checked = !uiState.showLauncherIcon,
+                            onCheckedChange = { newCheckedState ->
+                                if (newCheckedState) {
+                                    showHideLauncherIconDialog = true
+                                } else {
+                                    viewModel.dispatch(PreferredViewAction.ChangeShowLauncherIcon(true))
+                                }
+                            },
+                        )
                     }
                 }
             }
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.backup_settings)
+                    title = stringResource(R.string.backup_settings),
                 ) {
                     item {
                         BaseWidget(
@@ -320,7 +339,7 @@ fun PreferredPage(
                             title = stringResource(R.string.backup_settings_export),
                             description = stringResource(R.string.backup_settings_export_desc),
                             enabled = !uiState.backupBusy,
-                            onClick = { viewModel.dispatch(PreferredViewAction.RequestExportBackup) }
+                            onClick = { viewModel.dispatch(PreferredViewAction.RequestExportBackup) },
                         )
                     }
                     item {
@@ -329,7 +348,15 @@ fun PreferredPage(
                             title = stringResource(R.string.backup_settings_restore),
                             description = stringResource(R.string.backup_settings_restore_desc),
                             enabled = !uiState.backupBusy,
-                            onClick = { restoreLauncher.launch(arrayOf("application/json", "text/json", "*/*")) }
+                            onClick = {
+                                restoreLauncher.launch(
+                                    arrayOf(
+                                        "application/json",
+                                        "text/json",
+                                        "*/*",
+                                    ),
+                                )
+                            },
                         )
                     }
                 }
@@ -337,31 +364,34 @@ fun PreferredPage(
             // --- Other Settings Group ---
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.other)
+                    title = stringResource(R.string.other),
                 ) {
                     item {
                         BaseWidget(
                             icon = AppIcons.Lab,
                             title = stringResource(R.string.lab),
                             description = stringResource(R.string.lab_desc),
-                            onClick = { navigator.push(Route.Lab) }
+                            onClick = { navigator.push(Route.Lab) },
                         )
                     }
                     item {
                         BaseWidget(
                             icon = AppIcons.Info,
                             title = stringResource(R.string.about_detail),
-                            description = if (uiState.hasUpdate) stringResource(
-                                R.string.update_available,
-                                uiState.remoteVersion
-                            ) else "$revLevel ${AppConfig.VERSION_NAME}",
+                            description = if (uiState.hasUpdate) {
+                                stringResource(
+                                    R.string.update_available,
+                                    uiState.remoteVersion,
+                                )
+                            } else {
+                                "$revLevel ${AppConfig.VERSION_NAME}"
+                            },
                             descriptionColor = if (uiState.hasUpdate) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            onClick = { navigator.push(Route.About) }
+                            onClick = { navigator.push(Route.About) },
                         )
                     }
                 }
             }
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 
@@ -373,7 +403,7 @@ fun PreferredPage(
                 errorDialogInfo = null
                 viewModel.dispatch(dialogInfo.retryAction)
             },
-            title = stringResource(dialogInfo.titleResId)
+            title = stringResource(dialogInfo.titleResId),
         )
     }
 
@@ -388,7 +418,7 @@ fun PreferredPage(
             text = {
                 Text(
                     preview?.formatBackupRestorePreview(context)
-                        ?: stringResource(R.string.backup_settings_restore_confirm_desc)
+                        ?: stringResource(R.string.backup_settings_restore_confirm_desc),
                 )
             },
             confirmButton = {
@@ -397,7 +427,7 @@ fun PreferredPage(
                         viewModel.dispatch(PreferredViewAction.ConfirmRestoreBackup)
                         pendingRestorePreview = null
                         showRestoreConfirmDialog = false
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.confirm))
                 }
@@ -407,11 +437,11 @@ fun PreferredPage(
                     onClick = {
                         showRestoreConfirmDialog = false
                         pendingRestorePreview = null
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -424,37 +454,49 @@ fun PreferredPage(
                 TextButton(onClick = { backupValidationErrorText = null }) {
                     Text(stringResource(R.string.confirm))
                 }
-            }
+            },
         )
+    }
+
+    HideLauncherIconWarningDialog(
+        show = showHideLauncherIconDialog,
+        onDismiss = { showHideLauncherIconDialog = false },
+        onConfirm = {
+            showHideLauncherIconDialog = false
+            viewModel.dispatch(PreferredViewAction.ChangeShowLauncherIcon(false))
+        },
+    )
+}
+
+private fun BackupRestorePreview.formatBackupRestorePreview(context: Context): String = buildString {
+    append(
+        context.getString(
+            R.string.backup_settings_restore_preview_desc,
+            profileCount,
+            scopeCount,
+            settingCount,
+            historyCount,
+        ),
+    )
+    if (ignoredSettingCount > 0) {
+        append("\n")
+        append(
+            context.getString(
+                R.string.backup_settings_restore_ignored_settings,
+                ignoredSettingCount,
+            ),
+        )
+    }
+    if (warnings.isNotEmpty()) {
+        append("\n\n")
+        append(context.getString(R.string.backup_settings_restore_warnings_title))
+        append("\n")
+        append(warnings.formatBackupValidationIssues(context))
     }
 }
 
-private fun BackupRestorePreview.formatBackupRestorePreview(context: Context): String =
-    buildString {
-        append(
-            context.getString(
-                R.string.backup_settings_restore_preview_desc,
-                profileCount,
-                scopeCount,
-                settingCount,
-                historyCount
-            )
-        )
-        if (ignoredSettingCount > 0) {
-            append("\n")
-            append(context.getString(R.string.backup_settings_restore_ignored_settings, ignoredSettingCount))
-        }
-        if (warnings.isNotEmpty()) {
-            append("\n\n")
-            append(context.getString(R.string.backup_settings_restore_warnings_title))
-            append("\n")
-            append(warnings.formatBackupValidationIssues(context))
-        }
-    }
-
 private fun List<BackupValidationIssue>.formatBackupValidationIssues(
-    context: Context
-): String =
-    joinToString(separator = "\n") { issue ->
-        context.getString(issue.messageResId, *issue.args.toTypedArray())
-    }
+    context: Context,
+): String = joinToString(separator = "\n") { issue ->
+    context.getString(issue.messageResId, *issue.args.toTypedArray())
+}

@@ -2,18 +2,17 @@
 // Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.ui.page.main.settings.preferred.lab
 
-import com.rosan.installer.domain.settings.model.preferences.GithubUpdateChannel
-import com.rosan.installer.domain.settings.model.preferences.HttpProfile
 import com.rosan.installer.domain.settings.model.preferences.RootMode
+import com.rosan.installer.domain.settings.model.preferences.SmartAuthorizerCandidate
 
 data class LabSettingsState(
     val labRootEnableModuleFlash: Boolean = false,
     val labRootShowModuleArt: Boolean = true,
     val labRootMode: RootMode = RootMode.Magisk,
-    val labHttpProfile: HttpProfile = HttpProfile.ALLOW_SECURE,
-    val labHttpSaveFile: Boolean = false,
-    val labTapIconToShare: Boolean = false,
     val labAllowInstallWithoutUserAction: Boolean = false,
-    val githubUpdateChannel: GithubUpdateChannel = GithubUpdateChannel.OFFICIAL,
-    val customGithubProxyUrl: String = ""
+    val labRespectPlatformInstallPolicy: Boolean = false,
+    val labEnableAbiOverride: Boolean = false,
+    val labTryDifferentArchitecture: Boolean = false,
+    val tryMultipleAuthorizersOnInstall: Boolean = false,
+    val smartAuthorizerCandidates: List<SmartAuthorizerCandidate> = emptyList(),
 )

@@ -5,7 +5,10 @@ package com.rosan.installer.ui.page.miuix.settings.config.edit
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -13,12 +16,15 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
+import com.rosan.installer.core.env.AppConfig
 import com.rosan.installer.domain.settings.model.config.BiometricAuthMode
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.page.main.settings.config.edit.EditViewAction
@@ -48,6 +55,7 @@ import com.rosan.installer.ui.util.isNoneActive
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -56,20 +64,20 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import top.yukonga.miuix.kmp.window.WindowDialog
 
 @Composable
-fun MiuixEditPage(
-    id: Long? = null,
-    viewModel: EditViewModel = koinViewModel { parametersOf(id) },
-    useBlur: Boolean
-) {
+fun MiuixEditPage(id: Long? = null, viewModel: EditViewModel = koinViewModel { parametersOf(id) }, useBlur: Boolean) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -78,6 +86,7 @@ fun MiuixEditPage(
     val snackBarHostState = remember { SnackbarHostState() }
     val scrollBehavior = MiuixScrollBehavior()
     val showUnsavedDialogState = remember { mutableStateOf(false) }
+    val showAutoApproveSessionDialogState = remember { mutableStateOf(false) }
 
     MiuixUnsavedChangesDialog(
         showState = showUnsavedDialogState,
@@ -88,7 +97,48 @@ fun MiuixEditPage(
             showUnsavedDialogState.value = false
             navigator.pop()
         },
-        errorMessages = state.activeErrorResIds.map { stringResource(it) }
+        errorMessages = state.activeErrorResIds.map { stringResource(it) },
+    )
+
+    WindowDialog(
+        show = showAutoApproveSessionDialogState.value,
+        onDismissRequest = {
+            showAutoApproveSessionDialogState.value = false
+        },
+        title = stringResource(R.string.warning),
+        content = {
+            Column {
+                Text(
+                    text = stringResource(R.string.config_auto_approve_session_warning),
+                    color = MiuixTheme.colorScheme.onSurface,
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            showAutoApproveSessionDialogState.value = false
+                        },
+                        text = stringResource(R.string.cancel),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            showAutoApproveSessionDialogState.value = false
+                            dispatch(EditViewAction.ChangeDataAutoApproveSession(true))
+                        },
+                        text = stringResource(R.string.confirm),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
+            }
+        },
     )
 
     val shouldInterceptBackPress = state.hasUnsavedChanges || state.hasErrors
@@ -109,9 +159,13 @@ fun MiuixEditPage(
                     // 1. Specific Resource ID
                     // 2. Explicit String message
                     // 3. Localized generic fallback
-                    val snackBarText = event.messageResId?.let { @SuppressLint("LocalContextGetResourceValueCall") context.getString(it) }
-                        ?: event.message
-                        ?: unknownErrorString
+                    val snackBarText =
+                        event.messageResId?.let {
+                            @SuppressLint("LocalContextGetResourceValueCall")
+                            context.getString(it)
+                        }
+                            ?: event.message
+                            ?: unknownErrorString
 
                     snackBarHostState.showSnackbar(
                         message = snackBarText,
@@ -142,7 +196,7 @@ fun MiuixEditPage(
                 navigationIcon = {
                     MiuixBackButton(
                         icon = MiuixIcons.Regular.Close,
-                        onClick = { navigator.pop() }
+                        onClick = { navigator.pop() },
                     )
                 },
                 actions = {
@@ -151,10 +205,10 @@ fun MiuixEditPage(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Regular.Ok,
-                            contentDescription = stringResource(R.string.save)
+                            contentDescription = stringResource(R.string.save),
                         )
                     }
-                }
+                },
             )
         },
         snackbarHost = { SnackbarHost(state = snackBarHostState) },
@@ -169,7 +223,7 @@ fun MiuixEditPage(
             contentPadding = PaddingValues(
                 start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
                 top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection)
+                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
             ),
             overscrollEffect = null,
         ) {
@@ -181,29 +235,39 @@ fun MiuixEditPage(
                 Card(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = 12.dp),
                 ) {
                     MiuixDataAuthorizerWidget(state = state, dispatch = dispatch)
                     MiuixDataCustomizeAuthorizerWidget(state = state, dispatch = dispatch)
                     MiuixDataInstallModeWidget(state = state, dispatch = dispatch)
-                    if (state.globalInstallerBiometricAuthMode == BiometricAuthMode.FollowConfig)
+                    MiuixDataAutoApproveSessionWidget(
+                        state = state,
+                        dispatch = dispatch,
+                        onEnableRequest = {
+                            showAutoApproveSessionDialogState.value = true
+                        },
+                    )
+                    if (state.globalInstallerBiometricAuthMode == BiometricAuthMode.FollowConfig) {
                         MiuixDataRequireBiometricAuthWidget(state = state, dispatch = dispatch)
+                    }
                     MiuixToastModeWidget(state = state, dispatch = dispatch)
                 }
             }
-            if (isNoneActive(stateAuthorizer, globalAuthorizer))
+            if (isNoneActive(stateAuthorizer, globalAuthorizer)) {
                 item { MiuixSettingsTipCard(stringResource(R.string.config_authorizer_none_tips)) }
+            }
             item { SmallTitle(stringResource(R.string.config_label_installer_settings)) }
             item {
                 Card(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = 12.dp),
                 ) {
                     MiuixDataUserWidget(state = state, dispatch = dispatch)
                     MiuixInstallReasonWidget(state = state, dispatch = dispatch)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         MiuixDataPackageSourceWidget(state = state, dispatch = dispatch)
+                    }
                     MiuixDataInstallRequesterWidget(state = state, dispatch = dispatch)
                     MiuixDataDeclareInstallerWidget(state = state, dispatch = dispatch)
                     MiuixDataManualDexoptWidget(state = state, dispatch = dispatch)
@@ -217,18 +281,18 @@ fun MiuixEditPage(
                 Card(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 16.dp),
                 ) {
                     MiuixDataForAllUserWidget(state = state, dispatch = dispatch)
                     MiuixDataAllowTestOnlyWidget(state = state, dispatch = dispatch)
                     MiuixDataAllowDowngradeWidget(state = state, dispatch = dispatch)
-                    MiuixDataAllowSigMismatchWidget(state = state, dispatch = dispatch)
-                    MiuixDataAllowSigUnknownWidget(state = state, dispatch = dispatch)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                         MiuixDataBypassLowTargetSdkWidget(state = state, dispatch = dispatch)
+                    }
                     MiuixDataAllowAllRequestedPermissionsWidget(state = state, dispatch = dispatch)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                         MiuixRequestUpdateOwnershipWidget(state = state, dispatch = dispatch)
+                    }
                 }
             }
             item { SmallTitle(stringResource(R.string.config_label_preferences)) }
@@ -236,10 +300,14 @@ fun MiuixEditPage(
                 Card(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 16.dp),
                 ) {
                     MiuixDataSplitChooseAllWidget(state = state, dispatch = dispatch)
                     MiuixDataApkChooseAllWidget(state = state, dispatch = dispatch)
+                    if (state.checkAppSignature) {
+                        MiuixDataAllowSigMismatchWidget(state = state, dispatch = dispatch)
+                        MiuixDataAllowSigUnknownWidget(state = state, dispatch = dispatch)
+                    }
                 }
             }
             item { Spacer(Modifier.navigationBarsPadding()) }

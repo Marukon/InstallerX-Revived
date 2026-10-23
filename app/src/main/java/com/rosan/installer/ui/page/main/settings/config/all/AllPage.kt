@@ -13,17 +13,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -40,7 +34,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SmallExtendedFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -57,7 +50,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -86,7 +78,6 @@ fun AllPage(
     viewModel: AllViewModel = koinViewModel(),
     title: String,
     outerPadding: PaddingValues = PaddingValues(0.dp),
-    windowInsetsSides: WindowInsetsSides? = null
 ) {
     val navigator = LocalNavigator.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -126,13 +117,11 @@ fun AllPage(
             val result = snackBarHostState.showSnackbar(
                 message = message,
                 actionLabel = actionLabel,
-                withDismissAction = true
+                withDismissAction = true,
             )
             result == SnackbarResult.ActionPerformed
-        }
+        },
     )
-
-    val layoutDirection = LocalLayoutDirection.current
 
     val backdrop = rememberMaterial3BlurBackdrop(useBlur)
 
@@ -141,43 +130,36 @@ fun AllPage(
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        contentWindowInsets = windowInsetsSides?.let { ScaffoldDefaults.contentWindowInsets.only(it) }
-            ?: ScaffoldDefaults.contentWindowInsets,
         topBar = {
             LargeFlexibleTopAppBar(
                 modifier = Modifier.installerMaterial3BlurEffect(backdrop),
-                windowInsets = windowInsetsSides?.let { TopAppBarDefaults.windowInsets.only(it) }
-                    ?: TopAppBarDefaults.windowInsets,
                 title = {
                     Text(
                         text = title,
-                        modifier = Modifier.padding(start = 12.dp)
+                        modifier = Modifier.padding(start = 12.dp),
                     )
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backdrop.getMaterial3AppBarColor(),
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    scrolledContainerColor = backdrop.getMaterial3AppBarColor()
-                )
+                    scrolledContainerColor = backdrop.getMaterial3AppBarColor(),
+                ),
             )
         },
         floatingActionButton = {
             AnimatedVisibility(
                 modifier = Modifier
-                    .padding(
-                        bottom = outerPadding.calculateBottomPadding()
-                    )
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.End)),
+                    .padding(outerPadding),
                 visible = showFloating,
                 enter = scaleIn(),
-                exit = scaleOut()
+                exit = scaleOut(),
             ) {
                 SmallExtendedFloatingActionButton(
                     icon = {
                         Icon(
                             imageVector = AppIcons.Add,
-                            contentDescription = stringResource(id = R.string.add)
+                            contentDescription = stringResource(id = R.string.add),
                         )
                     },
                     text = {
@@ -185,14 +167,14 @@ fun AllPage(
                     },
                     onClick = {
                         navigator.push(Route.EditConfig(-1))
-                    }
+                    },
                 )
             }
         },
         snackbarHost = {
             SwipeableSnackbarHost(
                 hostState = snackBarHostState,
-                snackbar = { SnackbarHost(hostState = snackBarHostState) }
+                snackbar = { SnackbarHost(hostState = snackBarHostState) },
             )
         },
     ) { innerPadding ->
@@ -202,23 +184,20 @@ fun AllPage(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(
-                                top = innerPadding.calculateTopPadding(),
-                                bottom = outerPadding.calculateBottomPadding()
-                            ),
-                        contentAlignment = Alignment.Center
+                            .padding(innerPadding + outerPadding),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             ContainedLoadingIndicator(
                                 indicatorColor = MaterialTheme.colorScheme.primary,
-                                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                             )
                             Text(
                                 text = stringResource(id = R.string.loading),
-                                style = MaterialTheme.typography.titleLarge
+                                style = MaterialTheme.typography.titleLarge,
                             )
                         }
                     }
@@ -234,16 +213,7 @@ fun AllPage(
                         viewModel = viewModel,
                         listState = listState,
                         backdrop = backdrop,
-                        contentPadding = PaddingValues(
-                            top = innerPadding.calculateTopPadding() + 16.dp,
-                            bottom = outerPadding.calculateBottomPadding() + 16.dp,
-                            start = 16.dp + innerPadding.calculateStartPadding(layoutDirection) + outerPadding.calculateStartPadding(
-                                layoutDirection
-                            ),
-                            end = 16.dp + innerPadding.calculateEndPadding(layoutDirection) + outerPadding.calculateEndPadding(
-                                layoutDirection
-                            )
-                        )
+                        contentPadding = PaddingValues(16.dp) + outerPadding + innerPadding,
                     )
                 }
             }
@@ -257,7 +227,7 @@ private fun ShowDataWidget(
     listState: LazyGridState = rememberLazyGridState(),
     contentPadding: PaddingValues = PaddingValues(16.dp),
     backdrop: LayerBackdrop? = null,
-    adaptiveMinSize: Dp = 320.dp
+    adaptiveMinSize: Dp = 320.dp,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val configs = uiState.data.configs
@@ -274,16 +244,17 @@ private fun ShowDataWidget(
         state = listState,
     ) {
         // Insert the tip card as a list item to match MIUIX behavior
-        if (!uiState.userReadScopeTips)
+        if (!uiState.userReadScopeTips) {
             item {
                 ScopeTipCard(viewModel = viewModel)
             }
+        }
 
         items(configs) { entity ->
             DataItemWidget(
                 viewModel = viewModel,
                 entity = entity,
-                isDefault = entity.id == minId
+                isDefault = entity.id == minId,
             )
         }
     }
@@ -291,28 +262,24 @@ private fun ShowDataWidget(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun DataItemWidget(
-    viewModel: AllViewModel,
-    entity: ConfigModel,
-    isDefault: Boolean
-) {
+private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefault: Boolean) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceBright)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
     ) {
         Column(
             modifier = Modifier.padding(vertical = 16.dp, horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
                         text = entity.name,
-                        style = MaterialTheme.typography.titleMediumEmphasized
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                     )
                     if (isDefault) {
                         Spacer(modifier = Modifier.size(8.dp))
@@ -327,14 +294,14 @@ private fun DataItemWidget(
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             text = stringResource(R.string.config_status_inactive),
                             containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
                         )
                     }
                 }
                 if (entity.description.isNotEmpty()) {
                     Text(
                         text = entity.description,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
@@ -343,40 +310,43 @@ private fun DataItemWidget(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.outline,
         )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 modifier = Modifier
                     .weight(1f)
                     .align(Alignment.CenterVertically),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { viewModel.dispatch(AllViewAction.EditDataConfig(entity)) }) {
                     Icon(
                         imageVector = AppIcons.Edit,
-                        contentDescription = stringResource(id = R.string.edit)
+                        contentDescription = stringResource(id = R.string.edit),
                     )
                 }
-                if (!isDefault)
+                if (!isDefault) {
                     IconButton(onClick = { viewModel.dispatch(AllViewAction.DeleteDataConfig(entity)) }) {
                         Icon(
                             imageVector = AppIcons.Delete,
-                            contentDescription = stringResource(id = R.string.delete)
+                            contentDescription = stringResource(id = R.string.delete),
                         )
                     }
-                if (!isDefault) IconButton(onClick = {
-                    viewModel.dispatch(AllViewAction.ApplyConfig(entity))
-                }) {
-                    Icon(
-                        imageVector = AppIcons.Rule,
-                        contentDescription = stringResource(id = R.string.apply)
-                    )
+                }
+                if (!isDefault) {
+                    IconButton(onClick = {
+                        viewModel.dispatch(AllViewAction.ApplyConfig(entity))
+                    }) {
+                        Icon(
+                            imageVector = AppIcons.Rule,
+                            contentDescription = stringResource(id = R.string.apply),
+                        )
+                    }
                 }
             }
         }

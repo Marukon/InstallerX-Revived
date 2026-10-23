@@ -2,41 +2,33 @@
 // Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.data.engine.parser
 
+import com.rosan.installer.domain.engine.model.install.sourcePath
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
-import com.rosan.installer.domain.engine.model.source.DataEntity
-import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.model.packageinfo.InstalledAppInfo
 import com.rosan.installer.domain.engine.model.packageinfo.PackageIdentityStatus
-import com.rosan.installer.domain.engine.model.packageinfo.SignatureMatchStatus
-import com.rosan.installer.domain.engine.model.install.sourcePath
+import com.rosan.installer.domain.engine.model.source.DataEntity
+import com.rosan.installer.domain.engine.model.source.DataType
+import com.rosan.installer.domain.engine.model.source.ZipEntryMetadataSource
 import com.rosan.installer.domain.engine.provider.InstalledAppInfoProvider
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import java.io.File
-import java.util.zip.ZipFile
 
 class PackagePreprocessor(
-    private val installedAppInfoProvider: InstalledAppInfoProvider
+    private val installedAppInfoProvider: InstalledAppInfoProvider,
+    private val unifiedZipFileProvider: UnifiedZipFileProvider,
 ) {
 
-    data class ProcessedGroup(
-        val packageName: String,
-        val entities: List<AppEntity>,
-        val installedInfo: InstalledAppInfo?
-    )
+    data class ProcessedGroup(val packageName: String, val entities: List<AppEntity>, val installedInfo: InstalledAppInfo?)
 
-    data class SessionTypeInfo(
-        val isMultiAppSession: Boolean,
-        val sessionType: DataType,
-        val isFromSingleFile: Boolean
-    )
+    data class SessionTypeInfo(val isMultiAppSession: Boolean, val sessionType: DataType, val isFromSingleFile: Boolean)
 
     /**
      * Process raw data in parallel: Group -> Deduplicate -> Get installed system info.
      */
-    suspend fun process(rawEntities: List<AppEntity>): List<ProcessedGroup> = coroutineScope {
+    suspend fun process(rawEntities: List<AppEntity>, includeSignature: Boolean = true): List<ProcessedGroup> = coroutineScope {
         rawEntities
             .groupBy { it.packageName }
             .map { (packageName, entities) ->
@@ -44,7 +36,7 @@ class PackagePreprocessor(
                     // 1. Parallel Deduplication (IO intensive)
                     val deduplicated = deduplicateEntities(entities)
                     // 2. Parallel fetching of system info (IPC/IO intensive)
-                    val installedInfo = installedAppInfoProvider.getByPackageName(packageName)
+                    val installedInfo = installedAppInfoProvider.getByPackageName(packageName, includeSignature)
 
                     ProcessedGroup(packageName, deduplicated, installedInfo)
                 }
@@ -54,10 +46,7 @@ class PackagePreprocessor(
     /**
      * Determine session type (used for UI display logic).
      */
-    fun determineSessionType(
-        groups: List<ProcessedGroup>,
-        rawEntities: List<AppEntity>
-    ): SessionTypeInfo {
+    fun determineSessionType(groups: List<ProcessedGroup>, rawEntities: List<AppEntity>): SessionTypeInfo {
         val allEntities = groups.flatMap { it.entities }
 
         // 1. Determine the number of source files
@@ -86,26 +75,6 @@ class PackagePreprocessor(
         return SessionTypeInfo(isMultiAppSession, finalContainerType, isFromSingleFile)
     }
 
-    /**
-     * Helper method for signature verification status.
-     */
-    fun checkSignature(
-        baseEntity: AppEntity.BaseEntity?,
-        installedInfo: InstalledAppInfo?
-    ): SignatureMatchStatus {
-        return when {
-            installedInfo == null -> SignatureMatchStatus.NOT_INSTALLED
-            baseEntity?.signatureHash.isNullOrBlank() || installedInfo.signatureHash.isNullOrBlank() ->
-                SignatureMatchStatus.UNKNOWN_ERROR
-
-            baseEntity.signatureHash == installedInfo.signatureHash ->
-                SignatureMatchStatus.MATCH
-
-            else ->
-                SignatureMatchStatus.MISMATCH
-        }
-    }
-
     // Internal: Deduplication logic
     private suspend fun deduplicateEntities(entities: List<AppEntity>): List<AppEntity> = coroutineScope {
         val bases = entities.filterIsInstance<AppEntity.BaseEntity>()
@@ -127,22 +96,29 @@ class PackagePreprocessor(
     }
 
     private fun calculateFingerprint(entity: AppEntity.BaseEntity): String {
+        (entity.data as? ZipEntryMetadataSource)?.zipEntryMetadata
+            ?.takeIf { it.crc >= 0L && it.uncompressedSize >= 0L }
+            ?.let { return "${it.crc}|${it.uncompressedSize}" }
+
         return when (val data = entity.data) {
             is DataEntity.FileEntity -> {
                 // Full file hash (slower but accurate)
-                File(data.path).calculateSHA256() ?: "${data.path}_${entity.versionCode}"
+                data.calculateSHA256() ?: "${data.path}_${entity.versionCode}"
             }
 
             is DataEntity.ZipFileEntity -> {
                 // Zip Entry optimization: Use CRC + Size only, no decompression, extremely fast
                 try {
-                    ZipFile(data.parent.path).use { zip ->
+                    val allowLocalHeaderFallback = entity.sourceType?.allowsLocalHeaderFallback ?: true
+                    unifiedZipFileProvider.open(data.parent, allowLocalHeaderFallback).use { zip ->
                         zip.getEntry(data.name)?.let { "${it.crc}|${it.size}" }
                     } ?: "${data.name}_${entity.versionCode}"
                 } catch (_: Exception) {
                     "${data.name}_${entity.versionCode}"
                 }
             }
+
+            is DataEntity.SeekableZipEntryEntity -> "${data.crc}|${data.getSize()}"
 
             else -> "${entity.packageName}_${entity.versionCode}"
         }
@@ -155,7 +131,7 @@ class PackagePreprocessor(
     suspend fun checkPackageIdentity(
         baseEntity: AppEntity.BaseEntity?,
         installedInfo: InstalledAppInfo?,
-        sessionType: DataType
+        sessionType: DataType,
     ): PackageIdentityStatus = coroutineScope {
         // 1. Fast applicability checks
         if (sessionType != DataType.APK) {
@@ -187,15 +163,17 @@ class PackagePreprocessor(
         val fileData = baseEntity.data as? DataEntity.FileEntity
             ?: return@coroutineScope PackageIdentityStatus.ERROR
 
-        val newApkFile = File(fileData.path)
+        if (fileData is DataEntity.FileDescriptorEntity && !fileData.preInstallIdentityAnalysis) {
+            return@coroutineScope PackageIdentityStatus.NOT_APPLICABLE
+        }
 
         // 4. Fast-fail optimization: compare file sizes first.
-        if (newApkFile.length() != installedApkFile.length()) {
+        if (fileData.getSize() != installedApkFile.length()) {
             return@coroutineScope PackageIdentityStatus.DIFFERENT
         }
 
         // 5. Heavy validation: Full SHA-256 Hash Comparison.
-        val newAppHashDeferred = async(Dispatchers.IO) { newApkFile.calculateSHA256() }
+        val newAppHashDeferred = async(Dispatchers.IO) { fileData.calculateSHA256() }
         val installedAppHashDeferred = async(Dispatchers.IO) { installedApkFile.calculateSHA256() }
 
         val newAppHash = newAppHashDeferred.await()

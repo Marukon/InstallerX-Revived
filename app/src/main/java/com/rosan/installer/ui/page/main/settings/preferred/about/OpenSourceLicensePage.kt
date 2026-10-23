@@ -9,16 +9,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,7 +30,6 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -54,13 +47,14 @@ import com.mikepenz.aboutlibraries.entity.Library
 import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
-import com.mikepenz.aboutlibraries.ui.compose.m3.chipColors
 import com.mikepenz.aboutlibraries.ui.compose.m3.libraryColors
+import com.mikepenz.aboutlibraries.ui.compose.m3.style.m3VariantColors
+import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryDetailMode
+import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryRow
 import com.rosan.installer.R
-import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
-import com.rosan.installer.ui.page.main.widget.card.InfoTipCard
 import com.rosan.installer.ui.page.main.widget.setting.ExpressiveBackButton
+import com.rosan.installer.ui.theme.CornerRadius
 import com.rosan.installer.ui.theme.getMaterial3AppBarColor
 import com.rosan.installer.ui.theme.installerMaterial3BlurEffect
 import com.rosan.installer.ui.theme.rememberMaterial3BlurBackdrop
@@ -79,9 +73,6 @@ fun OpenSourceLicensePage(useBlur: Boolean) {
     val libraries by produceLibraries(R.raw.aboutlibraries)
 
     var selectedLibrary by remember { mutableStateOf<Library?>(null) }
-
-    val layoutDirection = LocalLayoutDirection.current
-    val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
 
     val backdrop = rememberMaterial3BlurBackdrop(useBlur)
 
@@ -105,39 +96,43 @@ fun OpenSourceLicensePage(useBlur: Boolean) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backdrop.getMaterial3AppBarColor(),
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    scrolledContainerColor = backdrop.getMaterial3AppBarColor()
-                )
+                    scrolledContainerColor = backdrop.getMaterial3AppBarColor(),
+                ),
             )
         },
     ) { paddingValues ->
-        val cornerRadius = 16.dp
         LibrariesContainer(
             libraries = libraries,
-            libraryModifier = Modifier
-                .padding(vertical = 4.dp)
-                .clip(RoundedCornerShape(cornerRadius)),
             modifier = Modifier
                 .fillMaxSize()
                 .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection) + 16.dp,
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection) + 16.dp,
-                bottom = paddingValues.calculateBottomPadding()
-            ),
+            contentPadding = paddingValues + PaddingValues(horizontal = 16.dp),
             colors = LibraryDefaults.libraryColors(
-                libraryBackgroundColor = MaterialTheme.colorScheme.surfaceBright,
+                libraryBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                 libraryContentColor = MaterialTheme.colorScheme.onSurface,
-                // To maintain the original appearance, explicitly set the license chip colors
-                // to match the old function's default badge colors.
-                licenseChipColors = LibraryDefaults.chipColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = contentColorFor(MaterialTheme.colorScheme.primary)
-                )
             ),
-            onLibraryClick = { library ->
+            variantColors = LibraryDefaults.m3VariantColors(
+                rowBackground = MaterialTheme.colorScheme.surfaceBright,
+                rowExpandedBackground = MaterialTheme.colorScheme.surfaceBright,
+                rowOnBackground = MaterialTheme.colorScheme.onSurface,
+                rowSubtleContent = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+            detailMode = LibraryDetailMode.None,
+            libraryRow = { _, library, expanded, toggle, style ->
+                LibraryRow(
+                    library = library,
+                    expanded = expanded,
+                    onToggle = toggle,
+                    style = style,
+                    modifier = Modifier
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(CornerRadius)),
+                )
+            },
+            onLibraryClick = { library: Library ->
                 selectedLibrary = library
-            }
+                true
+            },
         )
 
         if (selectedLibrary != null) {
@@ -163,38 +158,29 @@ fun OpenSourceLicensePage(useBlur: Boolean) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = Arrangement.Center,
                     ) {
                         Text(
                             text = library.name,
-                            style = MaterialTheme.typography.headlineSmall
+                            style = MaterialTheme.typography.headlineSmall,
                         )
                     }
                 },
                 text = {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        item {
-                            InfoTipCard(
-                                icon = AppIcons.License,
-                                text = stringResource(R.string.license, library.licenses.joinToString(separator = ", ") { it.name }),
-                                modifier = Modifier.fillMaxWidth(),
-                                noPadding = true
-                            )
-                        }
-
                         items(library.licenses.toList()) { license ->
                             OutlinedCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.outlinedCardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                                )
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                ),
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(16.dp)
+                                    modifier = Modifier.padding(16.dp),
                                 ) {
                                     Row {
                                         Text(
@@ -207,16 +193,17 @@ fun OpenSourceLicensePage(useBlur: Boolean) {
                                                     license.url?.let { url ->
                                                         uriHandler.openUri(url)
                                                     }
-                                                }
+                                                },
                                         )
                                     }
 
                                     Spacer(modifier = Modifier.size(8.dp))
 
                                     Text(
-                                        text = license.licenseContent ?: stringResource(R.string.no_license_text),
+                                        text = license.licenseContent
+                                            ?: stringResource(R.string.no_license_text),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -224,7 +211,7 @@ fun OpenSourceLicensePage(useBlur: Boolean) {
                     }
                 },
                 properties = DialogProperties(usePlatformDefaultWidth = false),
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier.padding(24.dp),
             )
         }
     }

@@ -27,13 +27,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rosan.installer.R
-import com.rosan.installer.ui.theme.InstallerTheme
+import com.rosan.installer.ui.theme.miuixSheetCardColors
 import com.rosan.installer.ui.util.KeyEventBlocker
 import com.rosan.installer.ui.util.isGestureNavigation
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardColors
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -53,7 +52,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 fun InstallModuleContent(
     outputLines: List<String>,
     isFinished: Boolean,
-    onClose: () -> Unit
+    onClose: () -> Unit,
 ) {
     KeyEventBlocker {
         it.key == Key.VolumeDown || it.key == Key.VolumeUp
@@ -72,14 +71,10 @@ fun InstallModuleContent(
         }
     }
 
-    val isDarkMode = InstallerTheme.isDark
-    val cardColor = if (isDynamicColor) MiuixTheme.colorScheme.surfaceContainer else
-        if (isDarkMode) Color.Black else Color.White
-
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         // The main content area for log output. It will grow with content.
         Card(
@@ -87,14 +82,11 @@ fun InstallModuleContent(
                 .fillMaxWidth()
                 .heightIn(min = 300.dp)
                 .weight(1f, fill = false),
-            colors = CardColors(
-                color = cardColor,
-                contentColor = MiuixTheme.colorScheme.onSurface
-            )
+            colors = miuixSheetCardColors(),
         ) {
             LazyColumn(
                 state = lazyListState,
-                modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp),
             ) {
                 items(outputLines) { line ->
                     Text(
@@ -102,7 +94,7 @@ fun InstallModuleContent(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
                         // Color-code the output: lines starting with "ERROR:" will be red.
-                        color = if (line.startsWith("ERROR:")) Color.Red else MiuixTheme.colorScheme.onSurface
+                        color = if (line.startsWith("ERROR:")) Color.Red else MiuixTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -121,15 +113,15 @@ fun InstallModuleContent(
                     .padding(top = 24.dp, bottom = if (isGestureNavigation()) 24.dp else 0.dp),
                 colors = ButtonDefaults.textButtonColors(
                     color = if (isDynamicColor) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.secondaryVariant,
-                    textColor = if (isDynamicColor) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSecondaryVariant
-                )
+                    textColor = if (isDynamicColor) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSecondaryVariant,
+                ),
             )
         } else {
             Button(
                 enabled = false,
                 onClick = {},
                 colors = ButtonDefaults.buttonColors(
-                    color = if (isDynamicColor) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.secondaryVariant
+                    color = if (isDynamicColor) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.secondaryVariant,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()

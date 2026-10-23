@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
+import com.rosan.installer.domain.session.model.ConfirmationRequestType
 import com.rosan.installer.ui.page.main.installer.InstallerStage
 import com.rosan.installer.ui.page.main.installer.InstallerViewModel
 import com.rosan.installer.ui.page.miuix.widgets.MiuixInstallerTipCard
@@ -40,20 +41,20 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 fun InstallConfirmContent(
     viewModel: InstallerViewModel,
     onCancel: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sessionInfo = uiState.stage as? InstallerStage.InstallConfirm ?: return
 
     LazyColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         item {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(top = 16.dp, bottom = 24.dp)
+                modifier = Modifier.padding(top = 16.dp, bottom = 24.dp),
             ) {
                 if (sessionInfo.appIcon != null) {
                     Image(
@@ -61,7 +62,7 @@ fun InstallConfirmContent(
                         contentDescription = null,
                         modifier = Modifier
                             .size(86.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp)),
                     )
                 } else {
                     // Placeholder if icon is missing
@@ -76,13 +77,23 @@ fun InstallConfirmContent(
                     color = MiuixTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 24.dp)
+                    modifier = Modifier.padding(horizontal = 24.dp),
                 )
             }
         }
 
         item {
             val tipMessage = when {
+                sessionInfo.requestType == ConfirmationRequestType.PRE_APPROVAL -> {
+                    val initiator = sessionInfo.sourceAppLabel ?: stringResource(R.string.installer_label_unknown)
+                    stringResource(R.string.install_confirm_pre_approval_tip, initiator)
+                }
+
+                sessionInfo.requestType == ConfirmationRequestType.PERMISSIONS -> {
+                    val initiator = sessionInfo.sourceAppLabel ?: stringResource(R.string.installer_label_unknown)
+                    stringResource(R.string.install_confirm_permissions_tip, initiator)
+                }
+
                 sessionInfo.isOwnershipConflict -> {
                     val owner = sessionInfo.sourceAppLabel ?: stringResource(R.string.installer_label_unknown)
                     stringResource(R.string.install_confirm_question_update_owner_reminder, owner)
@@ -106,29 +117,33 @@ fun InstallConfirmContent(
                     .navigationBarsPadding()
                     .padding(top = 24.dp, bottom = if (isGestureNavigation()) 24.dp else 0.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(
                     onClick = onCancel,
+                    enabled = !uiState.isConfirmationSubmitting,
                     text = stringResource(R.string.cancel),
                     colors = ButtonDefaults.textButtonColors(
                         color = if (isDynamicColor) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.secondaryVariant,
-                        textColor = if (isDynamicColor) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSecondaryVariant
+                        textColor = if (isDynamicColor) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSecondaryVariant,
                     ),
                     modifier = Modifier.weight(1f),
                 )
 
                 val confirmText = if (sessionInfo.isOwnershipConflict) {
                     stringResource(R.string.install_anyway)
+                } else if (sessionInfo.requestType == ConfirmationRequestType.PRE_APPROVAL) {
+                    stringResource(R.string.pre_approve)
                 } else {
                     stringResource(R.string.confirm)
                 }
 
                 TextButton(
                     onClick = onConfirm,
+                    enabled = !uiState.isConfirmationSubmitting,
                     text = confirmText,
                     colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             }
         }

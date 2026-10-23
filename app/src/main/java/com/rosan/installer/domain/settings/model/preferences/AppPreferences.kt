@@ -6,6 +6,7 @@ import com.rosan.installer.domain.settings.model.app.NamedPackage
 import com.rosan.installer.domain.settings.model.app.SharedUid
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.BiometricAuthMode
+import com.rosan.installer.domain.settings.model.config.NetworkSourceMode
 import com.rosan.installer.domain.settings.model.preferences.theme.PaletteStyle
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeColorSpec
 import com.rosan.installer.domain.settings.model.preferences.theme.ThemeMode
@@ -17,7 +18,9 @@ data class AppPreferences(
     val authorizer: Authorizer,
     val alwaysUseRootInSystem: Boolean,
     val customizeAuthorizer: String,
+    val hideIdenticalInstallComparisons: Boolean,
     val showDialogInstallExtendedMenu: Boolean,
+    val expandDialogTemporarySettingsByDefault: Boolean,
     val showSmartSuggestion: Boolean,
     val disableNotificationForDialogInstall: Boolean,
     val showDialogWhenPressingNotification: Boolean,
@@ -26,6 +29,11 @@ data class AppPreferences(
     val versionCompareInSingleLine: Boolean,
     val sdkCompareInMultiLine: Boolean,
     val showOPPOSpecial: Boolean,
+    val checkAppSignature: Boolean,
+    val checkSourceStamp: Boolean,
+    val checkSplitPackageSignatures: Boolean,
+    val showSignatureInfoOnMatch: Boolean,
+    val showSignatureDetails: Boolean,
     val installerRequireBiometricAuth: BiometricAuthMode,
     val uninstallerRequireBiometricAuth: Boolean,
     val showLiveActivity: Boolean,
@@ -33,9 +41,10 @@ data class AppPreferences(
     val useMiIslandBypassRestriction: Boolean,
     val useMiIslandOuterGlow: Boolean,
     val useMiIslandBlockingIntervalMs: Int,
-    val autoLockInstaller: Boolean,
     val autoSilentInstall: Boolean,
     val longClickBackgroundInstall: Boolean,
+    val tryMultipleAuthorizersOnInstall: Boolean,
+    val smartAuthorizerCandidates: List<SmartAuthorizerCandidate>,
     val showMiuixUI: Boolean,
     val preferSystemIcon: Boolean,
     val showLauncherIcon: Boolean,
@@ -47,9 +56,13 @@ data class AppPreferences(
     val managedSharedUserIdBlacklist: List<SharedUid>,
     val managedSharedUserIdExemptedPackages: List<NamedPackage>,
     val uninstallFlags: Int,
-    // Lab Settings
+    // Network Settings
+    val networkSourceMode: NetworkSourceMode,
+    val networkSourceModeWarningAcknowledged: Boolean,
+    val allowInternetAccess: Boolean,
     val githubUpdateChannel: GithubUpdateChannel,
     val customGithubProxyUrl: String,
+    // Lab Settings
     val labRootEnableModuleFlash: Boolean,
     val labRootShowModuleArt: Boolean,
     val labRootMode: RootMode,
@@ -60,6 +73,9 @@ data class AppPreferences(
     val labShowFilePath: Boolean,
     val labShowInstallInitiator: Boolean,
     val labInstallWithoutUserAction: Boolean,
+    val labRespectPlatformInstallPolicy: Boolean,
+    val labEnableAbiOverride: Boolean,
+    val labTryDifferentArchitecture: Boolean,
     val enableFileLogging: Boolean,
     // Theme Settings
     val themeMode: ThemeMode,
@@ -69,10 +85,11 @@ data class AppPreferences(
     val useMiuixMonet: Boolean,
     val useAppleFloatingBar: Boolean,
     val seedColorInt: Int, // Stored as raw Int from DataStore
+    val wallpaperSeedColorInt: Int,
     val useDynColorFollowPkgIcon: Boolean,
     val useDynColorFollowPkgIconForLiveActivity: Boolean,
     val useBlur: Boolean,
     // Predictive Back Settings
     val predictiveBackAnimation: PredictiveBackAnimation,
-    val predictiveBackExitDirection: PredictiveBackExitDirection
+    val predictiveBackExitDirection: PredictiveBackExitDirection,
 )

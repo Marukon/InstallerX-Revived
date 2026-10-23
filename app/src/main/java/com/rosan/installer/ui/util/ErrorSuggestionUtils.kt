@@ -4,6 +4,7 @@ package com.rosan.installer.ui.util
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.annotation.StringRes
@@ -15,8 +16,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
-import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.core.device.model.Manufacturer
+import com.rosan.installer.core.env.DeviceConfig
+import com.rosan.installer.domain.device.model.ShizukuMode
 import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
 import com.rosan.installer.domain.engine.model.error.InstallErrorType
 import com.rosan.installer.domain.engine.model.install.InstallOption
@@ -36,28 +38,31 @@ data class ErrorSuggestion(
     @param:StringRes val labelRes: Int,
     @param:StringRes val descriptionRes: Int? = null,
     val icon: ImageVector? = null,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
 )
 
 @Composable
 fun rememberErrorSuggestions(
     error: Throwable,
     viewModel: InstallerViewModel,
-    onShowUninstallConfirm: (keepData: Boolean, conflictingPkg: String?) -> Unit
+    onShowUninstallConfirm: (keepData: Boolean, conflictingPkg: String?) -> Unit,
 ): List<ErrorSuggestion> {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val config = uiState.config
     val capabilityProvider = koinInject<DeviceCapabilityProvider>()
     val hasMiPackageInstaller = capabilityProvider.hasMiPackageInstaller
+    val shizukuMode by capabilityProvider.shizukuModeFlow.collectAsStateWithLifecycle()
     val shizukuIcon = ImageVector.vectorResource(R.drawable.ic_shizuku)
 
-    return remember(error, config) {
+    return remember(error, config, shizukuMode) {
         buildList {
             // Calculate this first so we can use it to suppress unnecessary uninstall suggestions
+            val isRootShizuku = config.authorizer == Authorizer.Shizuku && shizukuMode == ShizukuMode.ROOT
             val canAllowDowngrade = config.authorizer == Authorizer.Root ||
-                    (config.authorizer == Authorizer.None && capabilityProvider.isSystemApp) ||
-                    (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE && config.authorizer == Authorizer.Shizuku)
+                (config.authorizer == Authorizer.None && capabilityProvider.isSystemApp) ||
+                isRootShizuku ||
+                (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE && config.authorizer == Authorizer.Shizuku)
 
             if (error.hasErrorType(InstallErrorType.TEST_ONLY)) {
                 add(
@@ -68,13 +73,13 @@ fun rememberErrorSuggestions(
                         onClick = {
                             viewModel.toggleInstallFlag(InstallOption.AllowTest.value, true)
                             viewModel.dispatch(InstallerViewAction.Install(false))
-                        }
-                    )
+                        },
+                    ),
                 )
             }
 
             val canShowProviderConflict = config.authorizer != Authorizer.None ||
-                    !(DeviceConfig.currentManufacturer == Manufacturer.XIAOMI && hasMiPackageInstaller)
+                !(DeviceConfig.currentManufacturer == Manufacturer.XIAOMI && hasMiPackageInstaller)
 
             if (canShowProviderConflict) {
                 if (error.hasErrorType(InstallErrorType.CONFLICTING_PROVIDER)) {
@@ -87,8 +92,8 @@ fun rememberErrorSuggestions(
                                 val conflictingPkg = Regex("used by ([\\w.]+)")
                                     .find(error.message ?: "")?.groupValues?.get(1)
                                 onShowUninstallConfirm(false, conflictingPkg)
-                            }
-                        )
+                            },
+                        ),
                     )
                 }
 
@@ -102,8 +107,8 @@ fun rememberErrorSuggestions(
                                 val conflictingPkg = Regex("already owned by ([\\w.]+)")
                                     .find(error.message ?: "")?.groupValues?.get(1)
                                 onShowUninstallConfirm(false, conflictingPkg)
-                            }
-                        )
+                            },
+                        ),
                     )
                 }
 
@@ -117,16 +122,21 @@ fun rememberErrorSuggestions(
                             labelRes = R.string.suggestion_uninstall_and_retry,
                             descriptionRes = R.string.suggestion_uninstall_and_retry_desc,
                             icon = AppIcons.Delete,
-                            onClick = { onShowUninstallConfirm(false, null) }
-                        )
+                            onClick = { onShowUninstallConfirm(false, null) },
+                        ),
                     )
                 }
             }
 
             val isAndroid14to15Downgrade = Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA &&
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-                    !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM &&
-                            (DeviceConfig.currentManufacturer == Manufacturer.SAMSUNG || DeviceConfig.currentManufacturer == Manufacturer.REALME))
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                !(
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM &&
+                        (
+                            DeviceConfig.currentManufacturer == Manufacturer.SAMSUNG ||
+                                DeviceConfig.currentManufacturer == Manufacturer.REALME
+                            )
+                    )
 
             // Only show keep-data uninstall if we CANNOT allow direct downgrade
             if (!canAllowDowngrade && isAndroid14to15Downgrade && config.authorizer == Authorizer.Shizuku) {
@@ -136,8 +146,8 @@ fun rememberErrorSuggestions(
                             labelRes = R.string.suggestion_uninstall_and_retry_keep_data,
                             descriptionRes = R.string.suggestion_uninstall_and_retry_keep_data_desc,
                             icon = AppIcons.Delete,
-                            onClick = { onShowUninstallConfirm(true, null) }
-                        )
+                            onClick = { onShowUninstallConfirm(true, null) },
+                        ),
                     )
                 }
             }
@@ -152,8 +162,8 @@ fun rememberErrorSuggestions(
                         onClick = {
                             viewModel.toggleInstallFlag(InstallOption.AllowDowngrade.value, true)
                             viewModel.dispatch(InstallerViewAction.Install(false))
-                        }
-                    )
+                        },
+                    ),
                 )
             }
 
@@ -170,12 +180,12 @@ fun rememberErrorSuggestions(
                                     it.copy(
                                         installerMode = InstallerMode.Custom,
                                         installer = SYSTEM_INSTALLER_PACKAGE_NAME,
-                                        callingFromUid = null
+                                        callingFromUid = null,
                                     )
                                 }
                                 viewModel.dispatch(InstallerViewAction.Install(false))
-                            }
-                        )
+                            },
+                        ),
                     )
                 } else {
                     add(
@@ -189,12 +199,12 @@ fun rememberErrorSuggestions(
                                     it.copy(
                                         installerMode = InstallerMode.Custom,
                                         installer = SYSTEM_INSTALLER_PACKAGE_NAME,
-                                        authorizer = Authorizer.Shizuku
+                                        authorizer = Authorizer.Shizuku,
                                     )
                                 }
                                 viewModel.dispatch(InstallerViewAction.Install(false))
-                            }
-                        )
+                            },
+                        ),
                     )
                 }
             }
@@ -214,8 +224,8 @@ fun rememberErrorSuggestions(
                             } catch (_: ActivityNotFoundException) {
                                 viewModel.dispatch(InstallerViewAction.ShowToast("Developer options screen not found."))
                             }
-                        }
-                    )
+                        },
+                    ),
                 )
             }
 
@@ -228,8 +238,8 @@ fun rememberErrorSuggestions(
                         onClick = {
                             viewModel.toggleInstallFlag(InstallOption.BypassLowTargetSdkBlock.value, true)
                             viewModel.dispatch(InstallerViewAction.Install(false))
-                        }
-                    )
+                        },
+                    ),
                 )
             }
 
@@ -242,12 +252,17 @@ fun rememberErrorSuggestions(
                         onClick = {
                             viewModel.toggleBypassBlacklist(true)
                             viewModel.dispatch(InstallerViewAction.Install(false))
-                        }
-                    )
+                        },
+                    ),
                 )
             }
 
-            if (error.hasErrorType(InstallErrorType.BLOCKED_BY_PROFILE)) {
+            if (error.hasErrorType(
+                    InstallErrorType.BLOCKED_BY_PROFILE,
+                    InstallErrorType.BLOCKED_BY_PROFILE_SIGNATURE_MISMATCH,
+                    InstallErrorType.BLOCKED_BY_PROFILE_SIGNATURE_UNKNOWN,
+                )
+            ) {
                 add(
                     ErrorSuggestion(
                         labelRes = R.string.install_anyway,
@@ -256,8 +271,27 @@ fun rememberErrorSuggestions(
                         onClick = {
                             viewModel.updateConfig { it.copy(bypassProfileRestriction = true) }
                             viewModel.dispatch(InstallerViewAction.Install(false))
-                        }
-                    )
+                        },
+                    ),
+                )
+            }
+
+            val initiatorPackageName = config.initiatorPackageName
+            if (error.hasErrorType(InstallErrorType.MISSING_INSTALL_PERMISSION) &&
+                !initiatorPackageName.isNullOrBlank()
+            ) {
+                add(
+                    ErrorSuggestion(
+                        labelRes = R.string.suggestion_allow_unknown_source,
+                        descriptionRes = R.string.suggestion_allow_unknown_source_desc,
+                        icon = AppIcons.Settings,
+                        onClick = {
+                            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                                .setData(Uri.parse("package:$initiatorPackageName"))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            runCatching { context.startActivity(intent) }
+                        },
+                    ),
                 )
             }
 
@@ -268,20 +302,21 @@ fun rememberErrorSuggestions(
                         labelRes = R.string.retry,
                         descriptionRes = R.string.suggestion_retry_install_desc,
                         icon = AppIcons.Retry,
-                        onClick = { viewModel.dispatch(InstallerViewAction.Install(false)) }
-                    )
+                        onClick = { viewModel.dispatch(InstallerViewAction.Install(false)) },
+                    ),
                 )
             }
 
-            if (error.hasErrorType(PrivilegedErrorType.DHIZUKU_NOT_WORK))
+            if (error.hasErrorType(PrivilegedErrorType.DHIZUKU_NOT_WORK)) {
                 add(
                     ErrorSuggestion(
                         labelRes = R.string.retry,
                         descriptionRes = R.string.suggestion_retry_install_desc,
                         icon = AppIcons.Retry,
-                        onClick = { viewModel.dispatch(InstallerViewAction.Install(false)) }
-                    )
+                        onClick = { viewModel.dispatch(InstallerViewAction.Install(false)) },
+                    ),
                 )
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -48,9 +50,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -74,16 +75,13 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.DropdownImpl
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.InputField
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Switch
@@ -93,17 +91,13 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.menu.WindowIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowListPopup
 
 @Composable
-fun MiuixApplyPage(
-    id: Long,
-    useBlur: Boolean,
-    viewModel: ApplyViewModel = koinViewModel { parametersOf(id) }
-) {
+fun MiuixApplyPage(id: Long, useBlur: Boolean, viewModel: ApplyViewModel = koinViewModel { parametersOf(id) }) {
     val navigator = LocalNavigator.current
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
@@ -127,6 +121,7 @@ fun MiuixApplyPage(
                 modifier = Modifier
                     .installerMiuixBlurEffect(topBarBackdrop)
                     .background(topBarBackdrop.getMiuixAppBarColor())
+                    .pointerInput(Unit) { detectTapGestures(onTap = {}) },
             ) {
                 TopAppBar(
                     color = Color.Transparent,
@@ -135,9 +130,10 @@ fun MiuixApplyPage(
                     navigationIcon = {
                         MiuixBackButton(
                             icon = MiuixIcons.Regular.Close,
-                            onClick = { navigator.pop() })
+                            onClick = { navigator.pop() },
+                        )
                     },
-                    actions = { TopAppBarActions(viewModel = viewModel, uiState = uiState) }
+                    actions = { TopAppBarActions(viewModel = viewModel, uiState = uiState) },
                 )
                 Spacer(modifier = Modifier.size(6.dp))
                 InputField(
@@ -145,9 +141,9 @@ fun MiuixApplyPage(
                         .fillMaxWidth()
                         .padding(
                             start = 16.dp + horizontalSafeInsets.calculateStartPadding(
-                                layoutDirection
+                                layoutDirection,
                             ),
-                            end = 16.dp + horizontalSafeInsets.calculateEndPadding(layoutDirection)
+                            end = 16.dp + horizontalSafeInsets.calculateEndPadding(layoutDirection),
                         )
                         .padding(bottom = 8.dp),
                     query = uiState.search,
@@ -155,7 +151,7 @@ fun MiuixApplyPage(
                     label = stringResource(R.string.search),
                     expanded = false,
                     onExpandedChange = {},
-                    onSearch = {}
+                    onSearch = {},
                 )
 
                 data class OrderData(val labelResId: Int, val type: ApplyViewState.OrderType)
@@ -164,7 +160,7 @@ fun MiuixApplyPage(
                     listOf(
                         OrderData(R.string.sort_by_label, ApplyViewState.OrderType.Label),
                         OrderData(R.string.sort_by_package_name, ApplyViewState.OrderType.PackageName),
-                        OrderData(R.string.sort_by_install_time, ApplyViewState.OrderType.FirstInstallTime)
+                        OrderData(R.string.sort_by_install_time, ApplyViewState.OrderType.FirstInstallTime),
                     )
                 }
 
@@ -175,11 +171,11 @@ fun MiuixApplyPage(
                     modifier = Modifier
                         .padding(
                             start = 6.dp + horizontalSafeInsets.calculateStartPadding(
-                                layoutDirection
+                                layoutDirection,
                             ),
-                            end = 6.dp + horizontalSafeInsets.calculateEndPadding(layoutDirection)
+                            end = 6.dp + horizontalSafeInsets.calculateEndPadding(layoutDirection),
                         )
-                        .padding(bottom = 6.dp)
+                        .padding(bottom = 6.dp),
                 ) {
                     MiuixDropdown(
                         items = dropdownItems,
@@ -187,7 +183,7 @@ fun MiuixApplyPage(
                         onSelectedIndexChange = { newIndex ->
                             val newOrderType = orderOptions[newIndex].type
                             viewModel.dispatch(ApplyViewAction.Order(newOrderType))
-                        }
+                        },
                     )
                 }
             }
@@ -197,7 +193,7 @@ fun MiuixApplyPage(
                 visible = showFloating,
                 enter = scaleIn(),
                 exit = scaleOut(),
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 16.dp),
             ) {
                 FloatingActionButton(
                     modifier = Modifier.padding(end = 16.dp),
@@ -206,15 +202,16 @@ fun MiuixApplyPage(
                         coroutineScope.launch {
                             lazyListState.animateScrollToItem(0)
                         }
-                    }) {
+                    },
+                ) {
                     Icon(
                         imageVector = AppIcons.ArrowUp,
                         contentDescription = null,
-                        tint = MiuixTheme.colorScheme.primary
+                        tint = MiuixTheme.colorScheme.primary,
                     )
                 }
             }
-        }
+        },
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             when {
@@ -223,16 +220,16 @@ fun MiuixApplyPage(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             InfiniteProgressIndicator()
                             Text(
                                 text = stringResource(id = R.string.loading),
-                                style = MiuixTheme.textStyles.main
+                                style = MiuixTheme.textStyles.main,
                             )
                         }
                     }
@@ -246,6 +243,7 @@ fun MiuixApplyPage(
                             uiState.appEntities.data.map { it.packageName }.toHashSet()
                         }
                     }
+                    val unknownLabel = stringResource(R.string.config_scope_unknown)
 
                     PullToRefresh(
                         isRefreshing = refreshing,
@@ -257,7 +255,7 @@ fun MiuixApplyPage(
                             stringResource(R.string.pull_to_refresh_hint1),
                             stringResource(R.string.pull_to_refresh_hint2),
                             stringResource(R.string.pull_to_refresh_hint3),
-                            stringResource(R.string.pull_to_refresh_hint4)
+                            stringResource(R.string.pull_to_refresh_hint4),
                         ),
                     ) {
                         LazyColumn(
@@ -272,31 +270,64 @@ fun MiuixApplyPage(
                                 start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
                                 top = paddingValues.calculateTopPadding() + 8.dp,
                                 end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-                                bottom = paddingValues.calculateBottomPadding()
+                                bottom = paddingValues.calculateBottomPadding(),
                             ),
-                            overscrollEffect = null
+                            overscrollEffect = null,
                         ) {
                             val apps = uiState.checkedApps
+                            val showUnknown = uiState.showUnknownScope &&
+                                (uiState.search.isBlank() || unknownLabel.contains(uiState.search, ignoreCase = true))
+
+                            if (showUnknown) {
+                                item(
+                                    key = "unknown_scope",
+                                    contentType = "scope_item",
+                                ) {
+                                    val isApplied = appliedPackageSet.contains(null)
+                                    UnknownScopeItemWidget(
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        title = unknownLabel,
+                                        isApplied = isApplied,
+                                        onToggle = { isChecked ->
+                                            viewModel.dispatch(ApplyViewAction.ApplyPackageName(null, isChecked))
+                                        },
+                                        onClick = {
+                                            viewModel.dispatch(ApplyViewAction.ApplyPackageName(null, !isApplied))
+                                        },
+                                    )
+                                }
+                            }
+
+                            if (showUnknown && apps.isNotEmpty()) {
+                                item(
+                                    key = "unknown_apps_group_spacing",
+                                    contentType = "scope_group_spacing",
+                                ) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+                            }
+
                             itemsIndexed(
                                 items = apps,
                                 key = { _, app -> app.packageName },
-                                contentType = { _, _ -> "app_item" }
+                                contentType = { _, _ -> "app_item" },
                             ) { index, app ->
                                 val cardRadius = CardDefaults.CornerRadius
                                 val shape = when {
                                     apps.size == 1 -> RoundedCornerShape(cardRadius)
+
                                     index == 0 -> RoundedCornerShape(
                                         topStart = cardRadius,
                                         topEnd = cardRadius,
                                         bottomStart = 0.dp,
-                                        bottomEnd = 0.dp
+                                        bottomEnd = 0.dp,
                                     )
 
                                     index == apps.lastIndex -> RoundedCornerShape(
                                         topStart = 0.dp,
                                         topEnd = 0.dp,
                                         bottomStart = cardRadius,
-                                        bottomEnd = cardRadius
+                                        bottomEnd = cardRadius,
                                     )
 
                                     else -> RoundedCornerShape(0.dp)
@@ -311,7 +342,7 @@ fun MiuixApplyPage(
                                 // Retrieve the dynamically loaded icon from the state
                                 val iconBitmap = uiState.displayIcons[app.packageName]
 
-                                MiuixItemWidget(
+                                ItemWidget(
                                     modifier = Modifier
                                         .padding(horizontal = 12.dp)
                                         .zIndex(-index.toFloat())
@@ -320,8 +351,8 @@ fun MiuixApplyPage(
                                             fadeOutSpec = null,
                                             placementSpec = spring(
                                                 stiffness = Spring.StiffnessMediumLow,
-                                                visibilityThreshold = IntOffset.VisibilityThreshold
-                                            )
+                                                visibilityThreshold = IntOffset.VisibilityThreshold,
+                                            ),
                                         ),
                                     app = app,
                                     icon = iconBitmap, // Pass the managed state
@@ -333,7 +364,7 @@ fun MiuixApplyPage(
                                     onClick = {
                                         viewModel.dispatch(ApplyViewAction.ApplyPackageName(app.packageName, !isApplied))
                                     },
-                                    showPackageName = uiState.showPackageName
+                                    showPackageName = uiState.showPackageName,
                                 )
                             }
                             item { Spacer(modifier = Modifier.navigationBarsPadding()) }
@@ -346,7 +377,7 @@ fun MiuixApplyPage(
 }
 
 @Composable
-private fun MiuixItemWidget(
+private fun ItemWidget(
     modifier: Modifier = Modifier,
     app: ApplyViewApp,
     icon: ImageBitmap?,
@@ -354,13 +385,13 @@ private fun MiuixItemWidget(
     shape: Shape,
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit,
-    showPackageName: Boolean
+    showPackageName: Boolean,
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(CardDefaults.defaultColors().color)
+            .background(CardDefaults.defaultColors().color),
     ) {
         Row(
             modifier = Modifier
@@ -368,12 +399,11 @@ private fun MiuixItemWidget(
                 .clickable(
                     onClick = onClick,
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = ripple(color = MiuixTheme.colorScheme.primary)
+                    indication = ripple(color = MiuixTheme.colorScheme.primary),
                 )
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-
             // The redundant side-effect logic and Context usage have been completely removed.
 
             if (icon != null) {
@@ -382,37 +412,84 @@ private fun MiuixItemWidget(
                     modifier = Modifier
                         .size(40.dp)
                         .align(Alignment.CenterVertically),
-                    contentDescription = null
+                    contentDescription = null,
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .align(Alignment.CenterVertically)
+                        .align(Alignment.CenterVertically),
                 )
             }
 
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
-                    .weight(1f)
+                    .weight(1f),
             ) {
                 Text(
                     text = app.label ?: app.packageName,
-                    style = MiuixTheme.textStyles.title4
+                    style = MiuixTheme.textStyles.title4,
                 )
                 AnimatedVisibility(showPackageName) {
                     Text(
                         text = app.packageName,
-                        style = MiuixTheme.textStyles.subtitle,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                        fontSize = MiuixTheme.textStyles.body2.fontSize,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantActions,
                     )
                 }
             }
             Switch(
                 modifier = Modifier.align(Alignment.CenterVertically),
                 checked = isApplied,
-                onCheckedChange = onToggle
+                onCheckedChange = onToggle,
+            )
+        }
+    }
+}
+
+@Composable
+private fun UnknownScopeItemWidget(
+    modifier: Modifier = Modifier,
+    title: String,
+    isApplied: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(CardDefaults.CornerRadius))
+            .background(CardDefaults.defaultColors().color),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    onClick = onClick,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple(color = MiuixTheme.colorScheme.primary),
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = AppIcons.InstallSource,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MiuixTheme.colorScheme.primary,
+            )
+
+            Text(
+                modifier = Modifier.weight(1f),
+                text = title,
+                style = MiuixTheme.textStyles.title4,
+            )
+
+            Switch(
+                checked = isApplied,
+                onCheckedChange = onToggle,
             )
         }
     }
@@ -420,62 +497,68 @@ private fun MiuixItemWidget(
 
 @Composable
 private fun TopAppBarActions(viewModel: ApplyViewModel, uiState: ApplyViewState) {
-    val showMenu = remember { mutableStateOf(false) }
-    val hapticFeedback = LocalHapticFeedback.current
-
-    val menuOptions = remember(
+    val reverseText = stringResource(R.string.sort_by_reverse_order)
+    val selectedFirstText = stringResource(R.string.sort_by_selected_first)
+    val systemAppText = stringResource(R.string.sort_by_show_system_app)
+    val packageNameText = stringResource(R.string.sort_by_show_package_name)
+    val unknownScopeText = stringResource(R.string.sort_by_show_unknown_scope)
+    val menuEntries = remember(
         uiState.orderInReverse,
         uiState.selectedFirst,
         uiState.showSystemApp,
-        uiState.showPackageName
+        uiState.showPackageName,
+        uiState.showUnknownScope,
+        reverseText,
+        selectedFirstText,
+        systemAppText,
+        packageNameText,
+        unknownScopeText,
     ) {
         listOf(
-            R.string.sort_by_reverse_order to uiState.orderInReverse,
-            R.string.sort_by_selected_first to uiState.selectedFirst,
-            R.string.sort_by_show_system_app to uiState.showSystemApp,
-            R.string.sort_by_show_package_name to uiState.showPackageName
+            DropdownEntry(
+                items = listOf(
+                    DropdownItem(
+                        text = reverseText,
+                        selected = uiState.orderInReverse,
+                        onClick = { viewModel.dispatch(ApplyViewAction.OrderInReverse(!uiState.orderInReverse)) },
+                    ),
+                    DropdownItem(
+                        text = selectedFirstText,
+                        selected = uiState.selectedFirst,
+                        onClick = { viewModel.dispatch(ApplyViewAction.SelectedFirst(!uiState.selectedFirst)) },
+                    ),
+                    DropdownItem(
+                        text = systemAppText,
+                        selected = uiState.showSystemApp,
+                        onClick = { viewModel.dispatch(ApplyViewAction.ShowSystemApp(!uiState.showSystemApp)) },
+                    ),
+                    DropdownItem(
+                        text = packageNameText,
+                        selected = uiState.showPackageName,
+                        onClick = { viewModel.dispatch(ApplyViewAction.ShowPackageName(!uiState.showPackageName)) },
+                    ),
+                ),
+            ),
+            DropdownEntry(
+                items = listOf(
+                    DropdownItem(
+                        text = unknownScopeText,
+                        selected = uiState.showUnknownScope,
+                        onClick = { viewModel.dispatch(ApplyViewAction.ShowUnknownScope(!uiState.showUnknownScope)) },
+                    ),
+                ),
+            ),
         )
     }
 
-    WindowListPopup(
-        show = showMenu.value,
-        popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-        alignment = PopupPositionProvider.Align.TopEnd,
-        onDismissRequest = {
-            showMenu.value = false
-        }
-    ) {
-        ListPopupColumn {
-            menuOptions.forEachIndexed { index, (labelResId, isSelected) ->
-                DropdownImpl(
-                    text = stringResource(labelResId),
-                    optionSize = menuOptions.size,
-                    isSelected = isSelected,
-                    onSelectedIndexChange = { selectedIndex ->
-                        when (selectedIndex) {
-                            0 -> viewModel.dispatch(ApplyViewAction.OrderInReverse(!uiState.orderInReverse))
-                            1 -> viewModel.dispatch(ApplyViewAction.SelectedFirst(!uiState.selectedFirst))
-                            2 -> viewModel.dispatch(ApplyViewAction.ShowSystemApp(!uiState.showSystemApp))
-                            3 -> viewModel.dispatch(ApplyViewAction.ShowPackageName(!uiState.showPackageName))
-                        }
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
-                    },
-                    index = index
-                )
-            }
-        }
-    }
-
-    IconButton(
-        onClick = {
-            showMenu.value = true
-        },
-        holdDownState = showMenu.value
+    WindowIconDropdownMenu(
+        entries = menuEntries,
+        collapseOnSelection = false,
     ) {
         Icon(
             imageVector = MiuixIcons.Regular.More,
             tint = MiuixTheme.colorScheme.onBackground,
-            contentDescription = "More Options"
+            contentDescription = stringResource(R.string.menu),
         )
     }
 }

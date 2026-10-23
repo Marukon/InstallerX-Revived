@@ -9,22 +9,14 @@ import android.os.SystemClock
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -49,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
@@ -79,18 +70,12 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun DefaultInstallerPage(
-    useBlur: Boolean,
-    viewModel: HomePageViewModel = koinViewModel()
-) {
+fun DefaultInstallerPage(useBlur: Boolean, viewModel: HomePageViewModel = koinViewModel()) {
     val context = LocalContext.current
     val navigator = LocalNavigator.current
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-
-    val layoutDirection = LocalLayoutDirection.current
-    val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
 
     val backdrop = rememberMaterial3BlurBackdrop(useBlur)
 
@@ -118,12 +103,17 @@ fun DefaultInstallerPage(
         }
     }
 
-    @SuppressLint("LocalContextGetResourceValueCall") LaunchedEffect(Unit) {
+    @SuppressLint("LocalContextGetResourceValueCall")
+    LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
             when (event) {
                 is HomePageViewEvent.ShowDefaultInstallerResult -> {
                     dismissDefaultInstallerProgress()
-                    Toast.makeText(context, context.getString(event.messageResId), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(event.messageResId),
+                        Toast.LENGTH_SHORT,
+                    ).show()
                 }
 
                 is HomePageViewEvent.ShowDefaultInstallerErrorDetail -> {
@@ -156,8 +146,8 @@ fun DefaultInstallerPage(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backdrop.getMaterial3AppBarColor(),
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    scrolledContainerColor = backdrop.getMaterial3AppBarColor()
-                )
+                    scrolledContainerColor = backdrop.getMaterial3AppBarColor(),
+                ),
             )
         },
     ) { paddingValues ->
@@ -165,43 +155,35 @@ fun DefaultInstallerPage(
             modifier = Modifier
                 .fillMaxSize()
                 .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-                bottom = paddingValues.calculateBottomPadding()
-            )
+            contentPadding = paddingValues,
         ) {
             when {
                 uiState.isSystemApp -> item { InfoTipCard(stringResource(R.string.config_authorizer_none_system_app_tips)) }
-                uiState.globalAuthorizer == Authorizer.None -> item { InfoTipCard(stringResource(R.string.config_authorizer_none_tips)) }
+
+                uiState.globalAuthorizer == Authorizer.None -> item {
+                    InfoTipCard(stringResource(R.string.config_authorizer_none_tips))
+                }
+
                 else -> item {
                     TitleTipCard(
                         title = stringResource(R.string.priv_page_what_is_this_title),
-                        text = stringResource(R.string.working_status_default_installer_tip)
+                        text = stringResource(R.string.working_status_default_installer_tip),
                     )
                 }
             }
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.basic)
+                    title = stringResource(R.string.basic),
                 ) {
-                    item {
-                        SwitchWidget(
-                            icon = AppIcons.AutoLockDefault,
-                            title = stringResource(R.string.auto_lock_default_installer),
-                            description = stringResource(R.string.auto_lock_default_installer_desc),
-                            checked = uiState.autoLockInstaller,
-                            enabled = uiState.globalAuthorizer != Authorizer.None
-                        ) { viewModel.dispatch(HomePageViewAction.ChangeAutoLockInstaller(it)) }
-                    }
+                    val defaultInstallerActionsEnabled =
+                        uiState.globalAuthorizer != Authorizer.None && !uiState.userSetLSPosedActive
                     item {
                         BaseWidget(
                             icon = AppIcons.LockDefault,
                             title = stringResource(R.string.lock_default_installer),
                             description = stringResource(R.string.lock_default_installer_desc),
-                            enabled = uiState.globalAuthorizer != Authorizer.None,
-                            onClick = { dispatchSetDefaultInstaller(true) }
+                            enabled = defaultInstallerActionsEnabled,
+                            onClick = { dispatchSetDefaultInstaller(true) },
                         )
                     }
                     item {
@@ -211,8 +193,8 @@ fun DefaultInstallerPage(
                                 stringResource(R.string.unlock_default_installer),
                             description =
                                 stringResource(R.string.unlock_default_installer_desc),
-                            enabled = uiState.globalAuthorizer != Authorizer.None,
-                            onClick = { dispatchSetDefaultInstaller(false) }
+                            enabled = defaultInstallerActionsEnabled,
+                            onClick = { dispatchSetDefaultInstaller(false) },
                         )
                     }
                 }
@@ -221,7 +203,7 @@ fun DefaultInstallerPage(
             if (!uiState.isSystemApp) {
                 item {
                     SegmentedColumn(
-                        title = stringResource(R.string.home_label_lsp)
+                        title = stringResource(R.string.advanced),
                     ) {
                         item {
                             SwitchWidget(
@@ -229,7 +211,13 @@ fun DefaultInstallerPage(
                                 title = stringResource(R.string.setting_lsposed_module_title),
                                 description = stringResource(R.string.setting_lsposed_module_desc),
                                 checked = uiState.userSetLSPosedActive,
-                                onCheckedChange = { viewModel.dispatch(HomePageViewAction.ChangeUserSetLSPosedActive(it)) }
+                                onCheckedChange = {
+                                    viewModel.dispatch(
+                                        HomePageViewAction.ChangeUserSetLSPosedActive(
+                                            it,
+                                        ),
+                                    )
+                                },
                             )
                         }
                     }
@@ -242,21 +230,21 @@ fun DefaultInstallerPage(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 6.dp),
                         shape = MaterialTheme.shapes.large,
-                        color = Color.Transparent
+                        color = Color.Transparent,
                     ) {
                         Column(
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(16.dp),
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Info,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = stringResource(R.string.home_label_lsp_link),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
@@ -266,14 +254,12 @@ fun DefaultInstallerPage(
                                 textDecoration = TextDecoration.Underline,
                                 modifier = Modifier.clickable {
                                     uriHandler.openUri("https://github.com/Chimioo/InxLocker")
-                                }
+                                },
                             )
                         }
                     }
                 }
             }
-
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 
@@ -290,13 +276,13 @@ fun DefaultInstallerPage(
                     viewModel.dispatch(action)
                 }
             },
-            title = stringResource(dialogInfo.titleResId)
+            title = stringResource(dialogInfo.titleResId),
         )
     }
 
     BlockingLoadingIndicator(
         visible = showDefaultInstallerProgress,
         text = stringResource(defaultInstallerProgressTextResId),
-        backdrop = backdrop
+        backdrop = backdrop,
     )
 }

@@ -4,6 +4,7 @@ package com.rosan.installer.ui.page.main.settings.preferred.lab
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rosan.installer.domain.settings.model.preferences.SmartAuthorizerPreferences
 import com.rosan.installer.domain.settings.repository.AppSettingsRepository
 import com.rosan.installer.domain.settings.repository.BooleanSetting
 import com.rosan.installer.domain.settings.repository.StringSetting
@@ -14,27 +15,24 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class LabSettingsViewModel(
-    appSettingsRepo: AppSettingsRepository,
-    private val updateSetting: UpdateSettingUseCase
-) : ViewModel() {
+class LabSettingsViewModel(appSettingsRepo: AppSettingsRepository, private val updateSetting: UpdateSettingUseCase) : ViewModel() {
 
     val state: StateFlow<LabSettingsState> = appSettingsRepo.preferencesFlow.map { prefs ->
         LabSettingsState(
             labRootEnableModuleFlash = prefs.labRootEnableModuleFlash,
             labRootShowModuleArt = prefs.labRootShowModuleArt,
             labRootMode = prefs.labRootMode,
-            labHttpProfile = prefs.labHttpProfile,
-            labHttpSaveFile = prefs.labHttpSaveFile,
-            labTapIconToShare = prefs.labTapIconToShare,
             labAllowInstallWithoutUserAction = prefs.labInstallWithoutUserAction,
-            githubUpdateChannel = prefs.githubUpdateChannel,
-            customGithubProxyUrl = prefs.customGithubProxyUrl
+            labRespectPlatformInstallPolicy = prefs.labRespectPlatformInstallPolicy,
+            labEnableAbiOverride = prefs.labEnableAbiOverride,
+            labTryDifferentArchitecture = prefs.labTryDifferentArchitecture,
+            tryMultipleAuthorizersOnInstall = prefs.tryMultipleAuthorizersOnInstall,
+            smartAuthorizerCandidates = prefs.smartAuthorizerCandidates,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
-        initialValue = LabSettingsState()
+        initialValue = LabSettingsState(),
     )
 
     fun dispatch(action: LabSettingsAction) {
@@ -42,63 +40,63 @@ class LabSettingsViewModel(
             is LabSettingsAction.LabChangeRootModuleFlash -> viewModelScope.launch {
                 updateSetting(
                     BooleanSetting.LabEnableModuleFlash,
-                    action.enable
+                    action.enable,
                 )
             }
 
             is LabSettingsAction.LabChangeRootShowModuleArt -> viewModelScope.launch {
                 updateSetting(
                     BooleanSetting.LabModuleFlashShowArt,
-                    action.enable
+                    action.enable,
                 )
             }
 
             is LabSettingsAction.LabChangeRootImplementation -> viewModelScope.launch {
                 updateSetting(
                     StringSetting.LabRootImplementation,
-                    action.implementation.name
-                )
-            }
-
-            is LabSettingsAction.LabChangeHttpProfile -> viewModelScope.launch {
-                updateSetting(
-                    StringSetting.LabHttpProfile,
-                    action.profile.name
-                )
-            }
-
-            is LabSettingsAction.LabChangeHttpSaveFile -> viewModelScope.launch {
-                updateSetting(
-                    BooleanSetting.LabHttpSaveFile,
-                    action.enable
-                )
-            }
-
-            is LabSettingsAction.LabChangeTapIconToShare -> viewModelScope.launch {
-                updateSetting(
-                    BooleanSetting.LabTapIconToShare,
-                    action.enable
+                    action.implementation.name,
                 )
             }
 
             is LabSettingsAction.LabChangeAllowInstallWithoutUserAction -> viewModelScope.launch {
                 updateSetting(
                     BooleanSetting.LabInstallWithoutUserAction,
-                    action.enable
+                    action.enable,
                 )
             }
 
-            is LabSettingsAction.LabChangeGithubUpdateChannel -> viewModelScope.launch {
+            is LabSettingsAction.LabChangeRespectPlatformInstallPolicy -> viewModelScope.launch {
                 updateSetting(
-                    StringSetting.GithubUpdateChannel,
-                    action.channel.name
+                    BooleanSetting.LabRespectPlatformInstallPolicy,
+                    action.enable,
                 )
             }
 
-            is LabSettingsAction.LabChangeCustomGithubProxyUrl -> viewModelScope.launch {
+            is LabSettingsAction.LabChangeEnableAbiOverride -> viewModelScope.launch {
                 updateSetting(
-                    StringSetting.CustomGithubProxyUrl,
-                    action.url
+                    BooleanSetting.LabEnableAbiOverride,
+                    action.enable,
+                )
+            }
+
+            is LabSettingsAction.LabChangeTryDifferentArchitecture -> viewModelScope.launch {
+                updateSetting(
+                    BooleanSetting.LabTryDifferentArchitecture,
+                    action.enable,
+                )
+            }
+
+            is LabSettingsAction.LabChangeTryMultipleAuthorizersOnInstall -> viewModelScope.launch {
+                updateSetting(
+                    BooleanSetting.TryMultipleAuthorizersOnInstall,
+                    action.enable,
+                )
+            }
+
+            is LabSettingsAction.LabChangeSmartAuthorizerCandidates -> viewModelScope.launch {
+                updateSetting(
+                    StringSetting.SmartAuthorizerCandidates,
+                    SmartAuthorizerPreferences.encode(action.candidates),
                 )
             }
         }

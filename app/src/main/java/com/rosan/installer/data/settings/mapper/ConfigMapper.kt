@@ -17,6 +17,7 @@ fun ConfigEntity.toDomainModel(scopeCount: Int = 0): ConfigModel {
         authorizer = this.authorizer,
         customizeAuthorizer = this.customizeAuthorizer,
         installMode = this.installMode,
+        autoApproveSession = this.autoApproveSession,
         toastMode = this.toastMode,
         enableCustomizeInstallReason = this.enableCustomizeInstallReason,
         installReason = this.installReason,
@@ -54,7 +55,7 @@ fun ConfigEntity.toDomainModel(scopeCount: Int = 0): ConfigModel {
         bypassBlacklistInstallSetByUser = this.bypassBlacklistInstallSetByUser,
         bypassProfileRestriction = this.bypassProfileRestriction,
         uninstallFlags = this.uninstallFlags,
-        callingFromUid = this.callingFromUid
+        callingFromUid = this.callingFromUid,
     )
 
     return model
@@ -74,6 +75,7 @@ fun ConfigModel.toEntity(): ConfigEntity {
         authorizer = this.authorizer,
         customizeAuthorizer = this.customizeAuthorizer,
         installMode = this.installMode,
+        autoApproveSession = this.autoApproveSession,
         toastMode = this.toastMode,
         enableCustomizeInstallReason = this.enableCustomizeInstallReason,
         installReason = this.installReason,
@@ -104,7 +106,7 @@ fun ConfigModel.toEntity(): ConfigEntity {
         apkChooseAll = this.apkChooseAll,
         requireBiometricAuth = this.requireBiometricAuth,
         createdAt = this.createdAt,
-        modifiedAt = this.modifiedAt
+        modifiedAt = this.modifiedAt,
     )
 
     // Transfer runtime flags

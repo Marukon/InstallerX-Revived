@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.data.updater.model
 
 import kotlinx.serialization.SerialName
@@ -11,5 +13,5 @@ data class GithubRelease(
     val isPrerelease: Boolean = false,
     @SerialName("html_url")
     val htmlUrl: String? = null,
-    val assets: List<GithubAsset> = emptyList()
+    val assets: List<GithubAsset> = emptyList(),
 )
