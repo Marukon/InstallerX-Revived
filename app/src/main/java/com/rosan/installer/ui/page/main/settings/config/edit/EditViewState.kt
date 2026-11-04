@@ -3,17 +3,18 @@
 package com.rosan.installer.ui.page.main.settings.config.edit
 
 import com.rosan.installer.R
+import com.rosan.installer.domain.settings.model.app.NamedPackage
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.BiometricAuthMode
 import com.rosan.installer.domain.settings.model.config.ConfigModel
 import com.rosan.installer.domain.settings.model.config.DexoptMode
-import com.rosan.installer.domain.settings.model.config.InstallRequesterMode
 import com.rosan.installer.domain.settings.model.config.InstallMode
 import com.rosan.installer.domain.settings.model.config.InstallReason
+import com.rosan.installer.domain.settings.model.config.InstallRequesterMode
 import com.rosan.installer.domain.settings.model.config.InstallerMode
-import com.rosan.installer.domain.settings.model.app.NamedPackage
 import com.rosan.installer.domain.settings.model.config.PackageSource
 import com.rosan.installer.domain.settings.model.config.ToastMode
+import com.rosan.installer.ui.util.isDhizukuActive
 
 data class EditViewState(
     val data: Data = Data.build(ConfigModel.default),
@@ -23,11 +24,20 @@ data class EditViewState(
 
     // Global states integrated into the view state
     val globalAuthorizer: Authorizer = Authorizer.Global,
-    val globalInstallerBiometricAuthMode: BiometricAuthMode = BiometricAuthMode.Disable
+    val globalCustomizeAuthorizer: String = "",
+    val globalInstallerBiometricAuthMode: BiometricAuthMode = BiometricAuthMode.Disable,
+    val checkAppSignature: Boolean = true,
+    val allowInternetAccess: Boolean = true,
+    val labRespectPlatformInstallPolicy: Boolean = false,
 ) {
     // Computed property for unsaved changes
     val hasUnsavedChanges: Boolean
         get() = originalData != null && data != originalData
+
+    val isDhizukuAuthorizerActive: Boolean
+        get() = isDhizukuActive(data.authorizer, globalAuthorizer)
+
+    fun dhizukuAwareDescriptionRes(defaultRes: Int): Int = if (isDhizukuAuthorizerActive) R.string.dhizuku_unsupported_desc else defaultRes
 
     // Return string resource IDs instead of resolved strings to keep State pure
     val activeErrorResIds: List<Int>
@@ -36,7 +46,9 @@ data class EditViewState(
             with(data) {
                 if (errorName) errors.add(R.string.config_error_name)
                 if (errorCustomizeAuthorizer) errors.add(R.string.config_error_customize_authorizer)
-                if (errorInstaller) errors.add(R.string.config_error_installer)
+                if (errorInstaller && !isDhizukuAuthorizerActive) {
+                    errors.add(R.string.config_error_installer)
+                }
                 if (errorInstallRequester) errors.add(R.string.config_error_package_not_found)
             }
             return errors
@@ -51,6 +63,7 @@ data class EditViewState(
         val authorizer: Authorizer,
         val customizeAuthorizer: String,
         val installMode: InstallMode,
+        val autoApproveSession: Boolean,
         val toastMode: ToastMode,
         val enableCustomizePackageSource: Boolean,
         val packageSource: PackageSource,
@@ -80,9 +93,9 @@ data class EditViewState(
         val requestUpdateOwnership: Boolean,
         val splitChooseAll: Boolean,
         val apkChooseAll: Boolean,
-        val requireBiometricAuth: Boolean
+        val requireBiometricAuth: Boolean,
     ) {
-        val errorName = name.isEmpty()// || name == "Default"
+        val errorName = name.isEmpty() // || name == "Default"
         val authorizerCustomize = authorizer == Authorizer.Customize
         val errorCustomizeAuthorizer = authorizerCustomize && customizeAuthorizer.isEmpty()
         val errorInstaller = installerMode == InstallerMode.Custom && installer.isEmpty()
@@ -95,6 +108,7 @@ data class EditViewState(
             authorizer = this.authorizer,
             customizeAuthorizer = if (this.authorizerCustomize) this.customizeAuthorizer else "",
             installMode = this.installMode,
+            autoApproveSession = this.autoApproveSession,
             toastMode = this.toastMode,
             enableCustomizeInstallReason = this.enableCustomizeInstallReason,
             installReason = this.installReason,
@@ -123,7 +137,7 @@ data class EditViewState(
             requestUpdateOwnership = this.requestUpdateOwnership,
             splitChooseAll = this.splitChooseAll,
             apkChooseAll = this.apkChooseAll,
-            requireBiometricAuth = this.requireBiometricAuth
+            requireBiometricAuth = this.requireBiometricAuth,
         )
 
         companion object {
@@ -134,6 +148,7 @@ data class EditViewState(
                 customizeAuthorizer = config.customizeAuthorizer,
                 toastMode = config.toastMode,
                 installMode = config.installMode,
+                autoApproveSession = config.autoApproveSession,
                 enableCustomizePackageSource = config.enableCustomizePackageSource,
                 enableCustomizeInstallReason = config.enableCustomizeInstallReason,
                 installReason = config.installReason,
@@ -162,7 +177,7 @@ data class EditViewState(
                 requestUpdateOwnership = config.requestUpdateOwnership,
                 splitChooseAll = config.splitChooseAll,
                 apkChooseAll = config.apkChooseAll,
-                requireBiometricAuth = config.requireBiometricAuth
+                requireBiometricAuth = config.requireBiometricAuth,
             )
         }
     }

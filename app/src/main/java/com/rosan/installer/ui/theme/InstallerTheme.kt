@@ -8,7 +8,6 @@ import androidx.activity.compose.LocalActivity
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
@@ -31,8 +30,8 @@ import com.rosan.installer.ui.theme.material.animateAsState
 import com.rosan.installer.ui.theme.material.dynamicColorScheme
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.ThemeController
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec as MiuixColorSpec
+import top.yukonga.miuix.kmp.theme.ThemeController
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle as MiuixPaletteStyle
 
 private val LocalIsDark = staticCompositionLocalOf { false }
@@ -47,28 +46,36 @@ val LocalInstallerColorScheme = staticCompositionLocalOf<ColorScheme> { error("N
 
 object InstallerTheme {
     val colorScheme: ColorScheme
-        @Composable @ReadOnlyComposable get() = LocalInstallerColorScheme.current
+        @Composable @ReadOnlyComposable
+        get() = LocalInstallerColorScheme.current
 
     val isDark: Boolean
-        @Composable @ReadOnlyComposable get() = LocalIsDark.current
+        @Composable @ReadOnlyComposable
+        get() = LocalIsDark.current
 
     val seedColor: Color
-        @Composable @ReadOnlyComposable get() = LocalSeedColor.current
+        @Composable @ReadOnlyComposable
+        get() = LocalSeedColor.current
 
     val paletteStyle: PaletteStyle
-        @Composable @ReadOnlyComposable get() = LocalPaletteStyle.current
+        @Composable @ReadOnlyComposable
+        get() = LocalPaletteStyle.current
 
     val colorSpec: ThemeColorSpec
-        @Composable @ReadOnlyComposable get() = LocalThemeColorSpec.current
+        @Composable @ReadOnlyComposable
+        get() = LocalThemeColorSpec.current
 
     val themeMode: ThemeMode
-        @Composable @ReadOnlyComposable get() = LocalThemeMode.current
+        @Composable @ReadOnlyComposable
+        get() = LocalThemeMode.current
 
     val useMiuixMonet: Boolean
-        @Composable @ReadOnlyComposable get() = LocalUseMiuixMonet.current
+        @Composable @ReadOnlyComposable
+        get() = LocalUseMiuixMonet.current
 
     val useDynamicColor: Boolean
-        @Composable @ReadOnlyComposable get() = LocalUseDynamicColor.current
+        @Composable @ReadOnlyComposable
+        get() = LocalUseDynamicColor.current
 }
 
 @Composable
@@ -80,7 +87,8 @@ fun InstallerTheme(
     useDynamicColor: Boolean,
     useMiuixMonet: Boolean,
     seedColor: Color,
-    content: @Composable () -> Unit
+    useAmoled: Boolean = false,
+    content: @Composable () -> Unit,
 ) {
     val preservedContent = remember {
         movableContentOf<@Composable () -> Unit> { targetContent ->
@@ -94,9 +102,11 @@ fun InstallerTheme(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
-    val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+    val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         colorResource(id = android.R.color.system_accent1_500)
-    else seedColor
+    } else {
+        seedColor
+    }
 
     // 1. Generate the base scheme with spec support
     val baseColorScheme = remember(keyColor, isDark, paletteStyle, colorSpec) {
@@ -104,12 +114,23 @@ fun InstallerTheme(
             keyColor = keyColor,
             isDark = isDark,
             style = paletteStyle,
-            colorSpec = colorSpec
+            colorSpec = colorSpec,
         )
     }
 
+    // Only callers that opt in use AMOLED backgrounds, and only in dark mode.
+    val colorScheme = if (useAmoled && isDark) {
+        baseColorScheme.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceContainer = Color.Black,
+        )
+    } else {
+        baseColorScheme
+    }
+
     // 2. Wrap it with smooth transitions
-    val animatedColorScheme = baseColorScheme.animateAsState()
+    val animatedColorScheme = colorScheme.animateAsState()
 
     CompositionLocalProvider(
         LocalIsDark provides isDark,
@@ -119,13 +140,14 @@ fun InstallerTheme(
         LocalThemeMode provides themeMode,
         LocalUseMiuixMonet provides useMiuixMonet,
         LocalUseDynamicColor provides useDynamicColor,
-        LocalThemeColorSpec provides colorSpec
+        LocalThemeColorSpec provides colorSpec,
     ) {
         // Disable navigation bar contrast enforced for Android 10 and above
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             NavigationBarContrastHandler()
+        }
 
-        if (useMiuix)
+        if (useMiuix) {
             InstallerMiuixTheme(
                 darkTheme = isDark,
                 themeMode = themeMode,
@@ -133,14 +155,20 @@ fun InstallerTheme(
                 useMiuixMonet = useMiuixMonet,
                 seedColor = seedColor,
                 paletteStyle = paletteStyle,
-                colorSpec = colorSpec
+                colorSpec = colorSpec,
             ) {
-                preservedContent(content)
+                val colors = MiuixTheme.colorScheme
+                // Keep the controller's dynamic-color mode and the card palette intact.
+                MiuixTheme(
+                    colors = if (useAmoled && isDark) colors.copy(surface = Color.Black) else colors,
+                ) {
+                    preservedContent(content)
+                }
             }
-        else {
+        } else {
             InstallerMaterialExpressiveTheme(
                 darkTheme = isDark,
-                colorScheme = animatedColorScheme
+                colorScheme = animatedColorScheme,
             ) {
                 preservedContent(content)
             }
@@ -148,13 +176,12 @@ fun InstallerTheme(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun InstallerMaterialExpressiveTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     colorScheme: ColorScheme,
     compatStatusBarColor: Boolean = true,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     if (compatStatusBarColor) {
         val view = LocalView.current
@@ -171,7 +198,7 @@ fun InstallerMaterialExpressiveTheme(
         colorScheme = colorScheme,
         motionScheme = MotionScheme.expressive(),
         typography = Typography,
-        content = content
+        content = content,
     )
 }
 
@@ -185,7 +212,7 @@ fun InstallerMiuixTheme(
     seedColor: Color,
     paletteStyle: PaletteStyle,
     colorSpec: ThemeColorSpec,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     if (compatStatusBarColor) {
         val view = LocalView.current
@@ -199,9 +226,11 @@ fun InstallerMiuixTheme(
 
     val controller = if (useMiuixMonet) {
         // --- Monet Engine Path ---
-        val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        val keyColor = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             colorResource(id = android.R.color.system_accent1_500)
-        else seedColor
+        } else {
+            seedColor
+        }
 
         val colorSchemeMode = when (themeMode) {
             ThemeMode.SYSTEM -> ColorSchemeMode.MonetSystem
@@ -219,20 +248,23 @@ fun InstallerMiuixTheme(
             PaletteStyle.Monochrome -> MiuixPaletteStyle.Monochrome
             PaletteStyle.Fidelity -> MiuixPaletteStyle.Fidelity
             PaletteStyle.Content -> MiuixPaletteStyle.Content
+            PaletteStyle.Cmf -> MiuixPaletteStyle.Cmf
         }
 
-        val colorSpecVersion = when (colorSpec) {
-            ThemeColorSpec.SPEC_2025 -> if (paletteStyle.supportsSpec2025) MiuixColorSpec.Spec2025 else MiuixColorSpec.Spec2021
+        // Pass the saved preference; Miuix resolves palette support and forces SPEC_2026 for Cmf.
+        // SPEC_2026 is only an effective spec in our UI, so fall back to the default preference.
+        val preferredColorSpec = when (colorSpec) {
             ThemeColorSpec.SPEC_2021 -> MiuixColorSpec.Spec2021
+            else -> MiuixColorSpec.Spec2025
         }
 
-        remember(colorSchemeMode, keyColor, paletteStyle, colorSpecVersion, darkTheme) {
+        remember(colorSchemeMode, keyColor, paletteStyle, preferredColorSpec, darkTheme) {
             ThemeController(
                 colorSchemeMode = colorSchemeMode,
                 keyColor = keyColor,
                 paletteStyle = style,
-                colorSpec = colorSpecVersion,
-                isDark = darkTheme
+                colorSpec = preferredColorSpec,
+                isDark = darkTheme,
             )
         }
     } else {
@@ -246,14 +278,14 @@ fun InstallerMiuixTheme(
         remember(colorSchemeMode, darkTheme) {
             ThemeController(
                 colorSchemeMode = colorSchemeMode,
-                isDark = darkTheme
+                isDark = darkTheme,
             )
         }
     }
 
     MiuixTheme(
         controller = controller,
-        content = content
+        content = content,
     )
 }
 
@@ -266,7 +298,7 @@ private fun NavigationBarContrastHandler() {
     DisposableEffect(configuration) {
         val window = activity?.window
         window?.isNavigationBarContrastEnforced = false
-        // Keep empty as we want this behavior to persist
-        onDispose {}
+
+        onDispose { /** Keep empty as we want this behavior to persist **/ }
     }
 }

@@ -2,13 +2,16 @@
 // Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.domain.settings.model.config
 
+import com.rosan.installer.domain.settings.model.preferences.NetworkAppNameSource
+
 /**
  * Define Toast Modes used by InstallerX
  */
 enum class ToastMode(val value: Int) {
     Disable(0),
     Always(1),
-    BackgroundOnly(2);
+    BackgroundOnly(2),
+    ;
 
     companion object {
         fun fromValue(value: Int): ToastMode = entries.find { it.value == value } ?: Disable
@@ -23,7 +26,7 @@ enum class InstallMode(val value: String) {
     AutoDialog("auto_dialog"),
     Notification("notification"),
     AutoNotification("auto_notification"),
-    Ignore("ignore");
+    Ignore("ignore"),
 }
 
 /**
@@ -32,7 +35,7 @@ enum class InstallMode(val value: String) {
 enum class InstallerMode(val value: Int) {
     Self(0),
     Initiator(1),
-    Custom(2)
+    Custom(2),
 }
 
 /**
@@ -41,7 +44,7 @@ enum class InstallerMode(val value: Int) {
 enum class InstallRequesterMode(val value: Int) {
     Disable(0),
     Initiator(1),
-    Custom(2)
+    Custom(2),
 }
 
 /**
@@ -52,7 +55,36 @@ enum class DexoptMode(val value: String) {
     Verify("verify"),
     SpeedProfile("speed-profile"),
     Speed("speed"),
-    Everything("everything");
+    Everything("everything"),
+}
+
+enum class NetworkSourceMode(val value: String) {
+    Cache("cache"),
+
+    // Preserve stored values so existing settings keep their selected mode.
+    Automatic("smart"),
+    StreamOnly("low_storage"),
+    ;
+
+    fun shouldTryRemoteSource(supportsRange: Boolean, contentLength: Long, platformSupported: Boolean): Boolean = this != Cache && supportsRange && contentLength > 0 && platformSupported
+
+    fun requiresRemoteSource(supportsRange: Boolean, contentLength: Long, platformSupported: Boolean): Boolean = this == StreamOnly && !shouldTryRemoteSource(supportsRange, contentLength, platformSupported)
+
+    fun resolveAppNameSource(configured: NetworkAppNameSource): NetworkAppNameSource = when (this) {
+        Cache -> NetworkAppNameSource.ApkResources
+        Automatic -> configured
+        StreamOnly -> NetworkAppNameSource.ServerFilename
+    }
+
+    fun shouldLoadAppIcon(configured: Boolean): Boolean = when (this) {
+        Cache -> true
+        Automatic -> configured
+        StreamOnly -> false
+    }
+
+    companion object {
+        fun fromValue(value: String): NetworkSourceMode = entries.find { it.value == value } ?: Cache
+    }
 }
 
 /**
@@ -91,7 +123,8 @@ enum class InstallReason(val value: Int) {
      * NOTE: this will cause launcher release desktop icon
      * @see android.content.pm.PackageManager.INSTALL_REASON_USER
      */
-    USER(4);
+    USER(4),
+    ;
 
     companion object {
         fun fromInt(value: Int) = entries.find { it.value == value } ?: UNKNOWN
@@ -104,11 +137,12 @@ enum class InstallReason(val value: Int) {
  * @see android.content.pm.PackageInstaller.SessionParams.setPackageSource
  */
 enum class PackageSource(val value: Int) {
-    UNSPECIFIED(0),     // Corresponds to PACKAGE_SOURCE_UNSPECIFIED
-    OTHER(1),           // Corresponds to PACKAGE_SOURCE_OTHER
-    STORE(2),           // Corresponds to PACKAGE_SOURCE_STORE
-    LOCAL_FILE(3),      // Corresponds to PACKAGE_SOURCE_LOCAL_FILE
-    DOWNLOADED_FILE(4); // Corresponds to PACKAGE_SOURCE_DOWNLOADED_FILE
+    UNSPECIFIED(0), // Corresponds to PACKAGE_SOURCE_UNSPECIFIED
+    OTHER(1), // Corresponds to PACKAGE_SOURCE_OTHER
+    STORE(2), // Corresponds to PACKAGE_SOURCE_STORE
+    LOCAL_FILE(3), // Corresponds to PACKAGE_SOURCE_LOCAL_FILE
+    DOWNLOADED_FILE(4), // Corresponds to PACKAGE_SOURCE_DOWNLOADED_FILE
+    ;
 
     companion object {
         fun fromInt(value: Int) = entries.find { it.value == value } ?: OTHER
@@ -121,7 +155,8 @@ enum class PackageSource(val value: Int) {
 enum class BiometricAuthMode(val value: String) {
     Disable("disable"),
     Enable("enable"),
-    FollowConfig("follow_config");
+    FollowConfig("follow_config"),
+    ;
 
     companion object {
         fun fromValueOrDefault(value: String) = entries.find { it.value == value } ?: FollowConfig

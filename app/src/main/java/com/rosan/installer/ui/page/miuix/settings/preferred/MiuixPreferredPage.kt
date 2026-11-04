@@ -37,7 +37,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
 import com.rosan.installer.core.device.model.Level
+import com.rosan.installer.core.device.model.Manufacturer
 import com.rosan.installer.core.env.AppConfig
+import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.domain.device.provider.DeviceCapabilityProvider
 import com.rosan.installer.domain.settings.model.backup.BackupRestorePreview
 import com.rosan.installer.domain.settings.model.backup.BackupValidationIssue
@@ -80,14 +82,13 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.window.WindowDialog
 
-
 @Composable
 fun MiuixPreferredPage(
     enableBlur: Boolean,
     viewModel: PreferredViewModel = koinViewModel(),
     title: String,
     outerPadding: PaddingValues,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
 ) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
@@ -107,18 +108,19 @@ fun MiuixPreferredPage(
 
     var errorDialogInfo by remember {
         mutableStateOf<PreferredViewEvent.ShowDefaultInstallerErrorDetail?>(
-            null
+            null,
         )
     }
     val showErrorSheetState = remember { mutableStateOf(false) }
     var pendingExportContent by remember { mutableStateOf<String?>(null) }
     var pendingRestorePreview by remember { mutableStateOf<BackupRestorePreview?>(null) }
     val showRestoreConfirmDialog = remember { mutableStateOf(false) }
+    val showHideLauncherIconDialog = remember { mutableStateOf(false) }
     var backupValidationErrorText by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         val content = pendingExportContent ?: return@rememberLauncherForActivityResult
         if (uri == null) {
@@ -138,7 +140,7 @@ fun MiuixPreferredPage(
     }
 
     val restoreLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         coroutineScope.launch {
@@ -153,9 +155,10 @@ fun MiuixPreferredPage(
     }
 
     val defaultInstallerErrorDetailActionLabel = stringResource(R.string.details)
-    @SuppressLint("LocalContextGetResourceValueCall") LaunchedEffect(Unit) {
+    @SuppressLint("LocalContextGetResourceValueCall")
+    LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
-            //snackBarHostState.newestSnackbarData()?.dismiss()
+            // snackBarHostState.newestSnackbarData()?.dismiss()
             when (event) {
                 is PreferredViewEvent.ShowDefaultInstallerResult -> {
                     snackbarHostState.showSnackbar(context.getString(event.messageResId))
@@ -165,7 +168,7 @@ fun MiuixPreferredPage(
                     val snackbarResult = snackbarHostState.showSnackbar(
                         message = context.getString(event.titleResId),
                         actionLabel = defaultInstallerErrorDetailActionLabel,
-                        duration = SnackbarDuration.Short
+                        duration = SnackbarDuration.Short,
                     )
                     if (snackbarResult == SnackbarResult.ActionPerformed) {
                         errorDialogInfo = event
@@ -210,10 +213,9 @@ fun MiuixPreferredPage(
                 modifier = Modifier.installerMiuixBlurEffect(topBarBackdrop),
                 color = topBarBackdrop.getMiuixAppBarColor(),
                 title = title,
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
             )
-
-        }
+        },
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -227,9 +229,9 @@ fun MiuixPreferredPage(
                 start = innerPadding.calculateStartPadding(layoutDirection),
                 top = innerPadding.calculateTopPadding(),
                 end = innerPadding.calculateEndPadding(layoutDirection),
-                bottom = outerPadding.calculateBottomPadding()
+                bottom = outerPadding.calculateBottomPadding(),
             ),
-            overscrollEffect = null
+            overscrollEffect = null,
         ) {
             item { Spacer(modifier = Modifier.size(12.dp)) }
             item { SmallTitle(stringResource(R.string.personalization)) }
@@ -237,7 +239,7 @@ fun MiuixPreferredPage(
                 Card(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = 12.dp),
                 ) {
                     MiuixNavigationItemWidget(
                         icon = AppIcons.Theme,
@@ -245,7 +247,7 @@ fun MiuixPreferredPage(
                         description = stringResource(R.string.theme_settings_desc),
                         onClick = {
                             navigator.push(Route.Theme)
-                        }
+                        },
                     )
                     MiuixNavigationItemWidget(
                         icon = AppIcons.InstallMode,
@@ -253,7 +255,7 @@ fun MiuixPreferredPage(
                         description = stringResource(R.string.installer_settings_desc),
                         onClick = {
                             navigator.push(Route.InstallerGlobal)
-                        }
+                        },
                     )
                     MiuixNavigationItemWidget(
                         icon = AppIcons.InstallMode,
@@ -261,39 +263,66 @@ fun MiuixPreferredPage(
                         description = stringResource(R.string.uninstaller_settings_desc),
                         onClick = {
                             navigator.push(Route.UninstallerGlobal)
-                        }
+                        },
                     )
                 }
             }
-            if (uiState.authorizer == Authorizer.None)
+            if (uiState.authorizer == Authorizer.None) {
                 item {
                     val tip =
-                        if (capabilityProvider.isSystemApp) stringResource(R.string.config_authorizer_none_system_app_tips)
-                        else stringResource(R.string.config_authorizer_none_tips)
+                        if (capabilityProvider.isSystemApp) {
+                            stringResource(R.string.config_authorizer_none_system_app_tips)
+                        } else {
+                            stringResource(R.string.config_authorizer_none_tips)
+                        }
                     MiuixSettingsTipCard(text = tip)
                 }
+            }
             item { SmallTitle(stringResource(R.string.basic)) }
             item {
                 Card(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = 12.dp),
                 ) {
+                    BasicComponent(
+                        title = stringResource(R.string.network_settings),
+                        summary = stringResource(
+                            if (uiState.allowInternetAccess) {
+                                R.string.network_settings_internet_access_enabled_desc
+                            } else {
+                                R.string.network_settings_internet_access_disabled_desc
+                            },
+                        ),
+                        onClick = { navigator.push(Route.Network) },
+                    )
                     MiuixDisableAdbVerify(
                         checked = !uiState.adbVerifyEnabled,
                         isError = uiState.authorizer == Authorizer.Dhizuku,
                         enabled = uiState.authorizer != Authorizer.Dhizuku &&
-                                uiState.authorizer != Authorizer.None,
+                            uiState.authorizer != Authorizer.None,
                         onCheckedChange = { isDisabled ->
                             viewModel.dispatch(
-                                PreferredViewAction.SetAdbVerifyEnabledState(!isDisabled)
+                                PreferredViewAction.SetAdbVerifyEnabledState(!isDisabled),
                             )
-                        }
+                        },
                     )
                     MiuixIgnoreBatteryOptimizationSetting(
                         checked = uiState.isIgnoringBatteryOptimizations,
                         enabled = !uiState.isIgnoringBatteryOptimizations,
                     ) { viewModel.dispatch(PreferredViewAction.RequestIgnoreBatteryOptimization) }
+                    MiuixSwitchWidget(
+                        title = stringResource(R.string.theme_settings_hide_launcher_icon),
+                        description = stringResource(R.string.theme_settings_hide_launcher_icon_desc),
+                        checked = !uiState.showLauncherIcon,
+                        onCheckedChange = { newCheckedState ->
+                            if (newCheckedState) {
+                                showHideLauncherIconDialog.value = true
+                            } else {
+                                viewModel.dispatch(PreferredViewAction.ChangeShowLauncherIcon(true))
+                            }
+                        },
+                    )
                 }
             }
             item { SmallTitle(stringResource(R.string.backup_settings)) }
@@ -301,19 +330,19 @@ fun MiuixPreferredPage(
                 Card(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = 12.dp),
                 ) {
                     BasicComponent(
                         title = stringResource(R.string.backup_settings_export),
                         summary = stringResource(R.string.backup_settings_export_desc),
                         enabled = !uiState.backupBusy,
-                        onClick = { viewModel.dispatch(PreferredViewAction.RequestExportBackup) }
+                        onClick = { viewModel.dispatch(PreferredViewAction.RequestExportBackup) },
                     )
                     BasicComponent(
                         title = stringResource(R.string.backup_settings_restore),
                         summary = stringResource(R.string.backup_settings_restore_desc),
                         enabled = !uiState.backupBusy,
-                        onClick = { restoreLauncher.launch(arrayOf("application/json", "text/json", "*/*")) }
+                        onClick = { restoreLauncher.launch(arrayOf("application/json", "text/json", "*/*")) },
                     )
                 }
             }
@@ -322,24 +351,28 @@ fun MiuixPreferredPage(
                 Card(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = 12.dp),
                 ) {
                     BasicComponent(
                         title = stringResource(R.string.lab),
                         summary = stringResource(R.string.lab_desc),
-                        onClick = { navigator.push(Route.Lab) }
+                        onClick = { navigator.push(Route.Lab) },
                     )
                     BasicComponent(
                         title = stringResource(R.string.about_detail),
-                        summary = if (uiState.hasUpdate) stringResource(
-                            R.string.update_available,
-                            uiState.remoteVersion
-                        ) else "$revLevel ${AppConfig.VERSION_NAME}",
+                        summary = if (uiState.hasUpdate) {
+                            stringResource(
+                                R.string.update_available,
+                                uiState.remoteVersion,
+                            )
+                        } else {
+                            "$revLevel ${AppConfig.VERSION_NAME}"
+                        },
                         summaryColor = BasicComponentColors(
                             color = if (uiState.hasUpdate) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            disabledColor = MiuixTheme.colorScheme.disabledOnSecondaryVariant
+                            disabledColor = MiuixTheme.colorScheme.disabledOnSecondaryVariant,
                         ),
-                        onClick = { navigator.push(Route.About) }
+                        onClick = { navigator.push(Route.About) },
                     )
                 }
             }
@@ -356,7 +389,7 @@ fun MiuixPreferredPage(
                     viewModel.dispatch(retryAction)
                 }
             },
-            title = stringResource(dialogInfo.titleResId)
+            title = stringResource(dialogInfo.titleResId),
         )
     }
     MiuixRestoreBackupConfirmDialog(
@@ -370,11 +403,19 @@ fun MiuixPreferredPage(
             viewModel.dispatch(PreferredViewAction.ConfirmRestoreBackup)
             pendingRestorePreview = null
             showRestoreConfirmDialog.value = false
-        }
+        },
     )
     MiuixBackupValidationErrorDialog(
         errorText = backupValidationErrorText,
-        onDismiss = { backupValidationErrorText = null }
+        onDismiss = { backupValidationErrorText = null },
+    )
+    MiuixHideLauncherIconWarningDialog(
+        show = showHideLauncherIconDialog.value,
+        onDismiss = { showHideLauncherIconDialog.value = false },
+        onConfirm = {
+            showHideLauncherIconDialog.value = false
+            viewModel.dispatch(PreferredViewAction.ChangeShowLauncherIcon(false))
+        },
     )
 }
 
@@ -383,7 +424,7 @@ private fun MiuixRestoreBackupConfirmDialog(
     show: Boolean,
     preview: BackupRestorePreview?,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
 ) {
     val context = LocalContext.current
     WindowDialog(
@@ -395,19 +436,19 @@ private fun MiuixRestoreBackupConfirmDialog(
                 Text(
                     text = preview?.formatBackupRestorePreview(context)
                         ?: stringResource(R.string.backup_settings_restore_confirm_desc),
-                    color = MiuixTheme.colorScheme.onSurface
+                    color = MiuixTheme.colorScheme.onSurface,
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     TextButton(
                         modifier = Modifier.weight(1f),
                         onClick = onDismiss,
-                        text = stringResource(R.string.cancel)
+                        text = stringResource(R.string.cancel),
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -416,18 +457,18 @@ private fun MiuixRestoreBackupConfirmDialog(
                         modifier = Modifier.weight(1f),
                         onClick = onConfirm,
                         text = stringResource(R.string.confirm),
-                        colors = ButtonDefaults.textButtonColorsPrimary()
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
                     )
                 }
             }
-        }
+        },
     )
 }
 
 @Composable
 private fun MiuixBackupValidationErrorDialog(
     errorText: String?,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     WindowDialog(
         show = errorText != null,
@@ -437,7 +478,7 @@ private fun MiuixBackupValidationErrorDialog(
             Column {
                 Text(
                     text = errorText.orEmpty(),
-                    color = MiuixTheme.colorScheme.onSurface
+                    color = MiuixTheme.colorScheme.onSurface,
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -446,55 +487,104 @@ private fun MiuixBackupValidationErrorDialog(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onDismiss,
                     text = stringResource(R.string.confirm),
-                    colors = ButtonDefaults.textButtonColorsPrimary()
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
                 )
             }
-        }
+        },
     )
 }
 
-private fun BackupRestorePreview.formatBackupRestorePreview(context: Context): String =
-    buildString {
-        append(
-            context.getString(
-                R.string.backup_settings_restore_preview_desc,
-                profileCount,
-                scopeCount,
-                settingCount,
-                historyCount
-            )
-        )
-        if (ignoredSettingCount > 0) {
-            append("\n")
-            append(context.getString(R.string.backup_settings_restore_ignored_settings, ignoredSettingCount))
-        }
-        if (warnings.isNotEmpty()) {
-            append("\n\n")
-            append(context.getString(R.string.backup_settings_restore_warnings_title))
-            append("\n")
-            append(warnings.formatBackupValidationIssues(context))
-        }
-    }
+@Composable
+private fun MiuixHideLauncherIconWarningDialog(
+    show: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    WindowDialog(
+        show = show,
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.warning),
+        content = {
+            Column {
+                Text(
+                    text = stringResource(R.string.theme_settings_hide_launcher_icon_warning),
+                    color = MiuixTheme.colorScheme.onSurface,
+                )
+                if (DeviceConfig.currentManufacturer == Manufacturer.XIAOMI) {
+                    Text(
+                        text = stringResource(R.string.theme_settings_hide_launcher_icon_warning_xiaomi),
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
 
-private fun List<BackupValidationIssue>.formatBackupValidationIssues(context: Context): String =
-    joinToString(separator = "\n") { issue ->
-        context.getString(issue.messageResId, *issue.args.toTypedArray())
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onDismiss,
+                        text = stringResource(R.string.cancel),
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    TextButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onConfirm,
+                        text = stringResource(R.string.confirm),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
+            }
+        },
+    )
+}
+
+private fun BackupRestorePreview.formatBackupRestorePreview(context: Context): String = buildString {
+    append(
+        context.getString(
+            R.string.backup_settings_restore_preview_desc,
+            profileCount,
+            scopeCount,
+            settingCount,
+            historyCount,
+        ),
+    )
+    if (ignoredSettingCount > 0) {
+        append("\n")
+        append(context.getString(R.string.backup_settings_restore_ignored_settings, ignoredSettingCount))
     }
+    if (warnings.isNotEmpty()) {
+        append("\n\n")
+        append(context.getString(R.string.backup_settings_restore_warnings_title))
+        append("\n")
+        append(warnings.formatBackupValidationIssues(context))
+    }
+}
+
+private fun List<BackupValidationIssue>.formatBackupValidationIssues(context: Context): String = joinToString(separator = "\n") { issue ->
+    context.getString(issue.messageResId, *issue.args.toTypedArray())
+}
 
 @Composable
 private fun MiuixDisableAdbVerify(
     checked: Boolean,
     isError: Boolean,
     enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     MiuixSwitchWidget(
         title = stringResource(R.string.disable_adb_install_verify),
-        description = if (!isError) stringResource(R.string.disable_adb_install_verify_desc)
-        else stringResource(R.string.disable_adb_install_verify_not_support_dhizuku_desc),
+        description = if (!isError) {
+            stringResource(R.string.disable_adb_install_verify_desc)
+        } else {
+            stringResource(R.string.disable_adb_install_verify_not_support_dhizuku_desc)
+        },
         checked = checked,
         enabled = enabled,
-        onCheckedChange = onCheckedChange
+        onCheckedChange = onCheckedChange,
     )
 }
 
@@ -508,14 +598,17 @@ private fun MiuixDisableAdbVerify(
 private fun MiuixIgnoreBatteryOptimizationSetting(
     checked: Boolean,
     enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     MiuixSwitchWidget(
         title = stringResource(R.string.ignore_battery_optimizations),
-        description = if (enabled) stringResource(R.string.ignore_battery_optimizations_desc)
-        else stringResource(R.string.ignore_battery_optimizations_desc_disabled),
+        description = if (enabled) {
+            stringResource(R.string.ignore_battery_optimizations_desc)
+        } else {
+            stringResource(R.string.ignore_battery_optimizations_desc_disabled)
+        },
         checked = checked,
         enabled = enabled,
-        onCheckedChange = onCheckedChange
+        onCheckedChange = onCheckedChange,
     )
 }

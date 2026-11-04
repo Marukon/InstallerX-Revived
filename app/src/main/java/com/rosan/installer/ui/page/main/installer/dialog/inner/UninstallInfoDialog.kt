@@ -54,7 +54,8 @@ import com.rosan.installer.ui.page.main.installer.dialog.DialogParamsType
 @Composable
 fun uninstallInfoDialog(
     viewModel: InstallerViewModel,
-    onTitleExtraClick: () -> Unit = {}
+    onTitleExtraClick: () -> Unit = {},
+    showTitleExtra: Boolean = true,
 ): DialogParams {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val appInfo = uiState.uiUninstallInfo ?: return DialogParams()
@@ -71,13 +72,13 @@ fun uninstallInfoDialog(
                     modifier = Modifier
                         .size(64.dp)
                         .clip(RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     if (iconBitmap != null) {
                         Image(
                             bitmap = iconBitmap,
                             modifier = Modifier.fillMaxSize(),
-                            contentDescription = null
+                            contentDescription = null,
                         )
                     } else {
                         // Fixed size placeholder while loading
@@ -90,16 +91,16 @@ fun uninstallInfoDialog(
             Row(
                 modifier = Modifier.animateContentSize(),
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = appInfo.appLabel ?: "Unknown Package",
-                    modifier = Modifier.basicMarquee()
+                    modifier = Modifier.basicMarquee(),
                 )
                 AnimatedVisibility(
-                    visible = stage == InstallerStage.UninstallReady,
+                    visible = showTitleExtra && stage == InstallerStage.UninstallReady,
                     enter = fadeIn() + slideInHorizontally { it },
-                    exit = fadeOut() + slideOutHorizontally { it }
+                    exit = fadeOut() + slideOutHorizontally { it },
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Spacer(modifier = Modifier.width(8.dp))
@@ -109,14 +110,14 @@ fun uninstallInfoDialog(
                                 .background(MaterialTheme.colorScheme.primaryContainer)
                                 .size(24.dp),
                             colors = IconButtonDefaults.iconButtonColors(
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             ),
-                            onClick = onTitleExtraClick
+                            onClick = onTitleExtraClick,
                         ) {
                             Icon(
                                 imageVector = AppIcons.AutoFixHigh,
                                 contentDescription = null,
-                                modifier = Modifier.padding(4.dp)
+                                modifier = Modifier.padding(4.dp),
                             )
                         }
                     }
@@ -128,19 +129,19 @@ fun uninstallInfoDialog(
                 Text(
                     stringResource(R.string.installer_package_name, appInfo.packageName),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.basicMarquee()
+                    modifier = Modifier.basicMarquee(),
                 )
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(
                     text = stringResource(
                         R.string.installer_version,
                         appInfo.versionName ?: "N/A",
-                        appInfo.versionCode?.toString() ?: "N/A"
+                        appInfo.versionCode?.toString() ?: "N/A",
                     ),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.basicMarquee()
+                    modifier = Modifier.basicMarquee(),
                 )
             }
-        }
+        },
     )
 }

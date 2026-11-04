@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 InstallerX Revived contributors
 package com.rosan.installer.util.timber
 
 import android.content.Context
@@ -11,10 +13,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-class LogController(
-    private val context: Context,
-    private val appSettingsRepo: AppSettingsRepository
-) {
+class LogController(private val context: Context, private val appSettingsRepo: AppSettingsRepository) {
     private var fileLoggingTree: FileLoggingTree? = null
 
     // Use Main scope for collecting flow, file IO is handled internally by the Tree on IO dispatcher

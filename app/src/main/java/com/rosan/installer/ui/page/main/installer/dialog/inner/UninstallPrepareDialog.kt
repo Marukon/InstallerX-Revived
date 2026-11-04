@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rosan.installer.R
+import com.rosan.installer.core.bitmask.hasFlag
 import com.rosan.installer.domain.engine.model.install.UninstallFlags
 import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.page.main.installer.InstallerViewAction
@@ -28,27 +30,26 @@ import com.rosan.installer.ui.page.main.installer.dialog.DialogParams
 import com.rosan.installer.ui.page.main.installer.dialog.DialogParamsType
 import com.rosan.installer.ui.page.main.installer.dialog.dialogButtons
 import com.rosan.installer.ui.page.main.widget.chip.Chip
-import com.rosan.installer.core.bitmask.hasFlag
 
 /**
  * Displays the initial confirmation screen for an uninstall operation.
  * It provides an option to keep app data, shown via an animated Chip.
  */
 @Composable
-fun uninstallReadyDialog(
-    viewModel: InstallerViewModel
-): DialogParams {
+fun uninstallReadyDialog(viewModel: InstallerViewModel): DialogParams {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uninstallFlags = uiState.config.uninstallFlags
+    val isArchived = uiState.uiUninstallInfo?.isArchived == true
+
     // State to control the visibility of the animated chip.
     var showChips by remember { mutableStateOf(false) }
 
     // Use the shared info dialog and pass the click handler to toggle chip visibility.
     val baseParams = uninstallInfoDialog(
         viewModel = viewModel,
-        onTitleExtraClick = { showChips = !showChips }
+        onTitleExtraClick = { showChips = !showChips },
+        showTitleExtra = !isArchived,
     )
-
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val uninstallFlags = uiState.config.uninstallFlags
 
     val deleteKeepData = uninstallFlags.hasFlag(UninstallFlags.DELETE_KEEP_DATA)
     val deleteAllUsers = uninstallFlags.hasFlag(UninstallFlags.DELETE_ALL_USERS)
@@ -57,14 +58,19 @@ fun uninstallReadyDialog(
     // Override the 'text' and 'buttons' sections of the base parameters.
     return baseParams.copy(
         text = DialogInnerParams(DialogParamsType.InstallerUninstallReady.id) {
+            if (isArchived) {
+                Text(stringResource(R.string.uninstall_archive_message))
+                return@DialogInnerParams
+            }
+
             // Use AnimatedVisibility to show/hide the chip with animation.
             AnimatedVisibility(
                 visible = showChips,
                 enter = fadeIn() + expandVertically(), // Fade in + expand
-                exit = fadeOut() + shrinkVertically()  // Fade out + shrink
+                exit = fadeOut() + shrinkVertically(), // Fade out + shrink
             ) {
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Chip(
                         selected = deleteKeepData,
@@ -73,12 +79,12 @@ fun uninstallReadyDialog(
                             viewModel.dispatch(
                                 InstallerViewAction.ToggleUninstallFlag(
                                     flag = UninstallFlags.DELETE_KEEP_DATA,
-                                    enable = !deleteKeepData
-                                )
+                                    enable = !deleteKeepData,
+                                ),
                             )
                         },
                         label = stringResource(id = R.string.uninstall_keep_data),
-                        icon = AppIcons.Save // Using a "Save" icon for "Keep data"
+                        icon = AppIcons.Save, // Using a "Save" icon for "Keep data"
                     )
                     Chip(
                         selected = deleteAllUsers,
@@ -87,12 +93,12 @@ fun uninstallReadyDialog(
                             viewModel.dispatch(
                                 InstallerViewAction.ToggleUninstallFlag(
                                     flag = UninstallFlags.DELETE_ALL_USERS,
-                                    enable = !deleteAllUsers
-                                )
+                                    enable = !deleteAllUsers,
+                                ),
                             )
                         },
                         label = stringResource(id = R.string.uninstall_all_users),
-                        icon = AppIcons.InstallForAllUsers // Using a "Group" icon for "All users"
+                        icon = AppIcons.InstallForAllUsers, // Using a "Group" icon for "All users"
                     )
                     Chip(
                         selected = deleteSystemApp,
@@ -101,12 +107,12 @@ fun uninstallReadyDialog(
                             viewModel.dispatch(
                                 InstallerViewAction.ToggleUninstallFlag(
                                     flag = UninstallFlags.DELETE_SYSTEM_APP,
-                                    enable = !deleteSystemApp
-                                )
+                                    enable = !deleteSystemApp,
+                                ),
                             )
                         },
                         label = stringResource(id = R.string.uninstall_delete_system_app),
-                        icon = AppIcons.BugReport // Using a "Warning" icon for "Delete system app"
+                        icon = AppIcons.BugReport, // Using a "Warning" icon for "Delete system app"
                     )
                 }
             }
@@ -114,14 +120,14 @@ fun uninstallReadyDialog(
         buttons = dialogButtons(DialogParamsType.InstallerUninstallReady.id) {
             listOf(
                 // Uninstall button triggers the uninstall action.
-                DialogButton(stringResource(R.string.uninstall)) {
+                DialogButton(stringResource(if (isArchived) R.string.uninstall_archive else R.string.uninstall)) {
                     viewModel.dispatch(InstallerViewAction.Uninstall)
                 },
                 // Cancel button closes the dialog.
                 DialogButton(stringResource(R.string.cancel)) {
                     viewModel.dispatch(InstallerViewAction.Close)
-                }
+                },
             )
-        }
+        },
     )
 }

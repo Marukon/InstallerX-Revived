@@ -20,6 +20,7 @@ import com.rosan.installer.data.settings.repository.BackupRepositoryImpl
 import com.rosan.installer.data.settings.repository.ConfigRepositoryImpl
 import com.rosan.installer.data.settings.repository.OperationHistoryRepositoryImpl
 import com.rosan.installer.domain.history.repository.OperationHistoryRepository
+import com.rosan.installer.domain.history.usecase.RecordOperationHistoryUseCase
 import com.rosan.installer.domain.settings.provider.PrivilegedProvider
 import com.rosan.installer.domain.settings.provider.SystemAppProvider
 import com.rosan.installer.domain.settings.provider.SystemEnvProvider
@@ -33,8 +34,10 @@ import com.rosan.installer.domain.settings.usecase.backup.ParseBackupUseCase
 import com.rosan.installer.domain.settings.usecase.backup.PrepareBackupRestoreUseCase
 import com.rosan.installer.domain.settings.usecase.backup.RestoreBackupUseCase
 import com.rosan.installer.domain.settings.usecase.backup.ValidateBackupUseCase
+import com.rosan.installer.domain.settings.usecase.config.DeleteConfigWithScopesUseCase
 import com.rosan.installer.domain.settings.usecase.config.GetConfigDraftUseCase
 import com.rosan.installer.domain.settings.usecase.config.GetResolvedConfigUseCase
+import com.rosan.installer.domain.settings.usecase.config.RestoreDeletedConfigSnapshotUseCase
 import com.rosan.installer.domain.settings.usecase.config.SaveConfigUseCase
 import com.rosan.installer.domain.settings.usecase.config.ToggleAppTargetConfigUseCase
 import com.rosan.installer.domain.settings.usecase.settings.GetPackageUidUseCase
@@ -43,7 +46,6 @@ import com.rosan.installer.domain.settings.usecase.settings.ManageSharedUidListU
 import com.rosan.installer.domain.settings.usecase.settings.SetLauncherIconUseCase
 import com.rosan.installer.domain.settings.usecase.settings.ToggleUninstallFlagUseCase
 import com.rosan.installer.domain.settings.usecase.settings.UpdateSettingUseCase
-import com.rosan.installer.domain.history.usecase.RecordOperationHistoryUseCase
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.factoryOf
@@ -67,7 +69,7 @@ val settingsModule = module {
     single(createdAtStart = true) {
         DatabaseInitializer(
             configRepository = get(),
-            appScope = get(named("AppScope"))
+            appScope = get(named("AppScope")),
         )
     }
 
@@ -75,8 +77,8 @@ val settingsModule = module {
     single<DataStore<Preferences>> {
         PreferenceDataStoreFactory.create(
             migrations = listOf(
-                SharedPreferencesMigration(androidContext(), "app")
-            )
+                SharedPreferencesMigration(androidContext(), "app"),
+            ),
         ) {
             androidContext().preferencesDataStoreFile("app_settings")
         }
@@ -88,7 +90,7 @@ val settingsModule = module {
         AppSettingsRepositoryImpl(
             appDataStore = get(),
             capabilityProvider = get(),
-            appScope = get(named("AppScope"))
+            appScope = get(named("AppScope")),
         )
     }
 
@@ -99,7 +101,7 @@ val settingsModule = module {
     single<ThemeStateProvider> {
         ThemeStateProviderImpl(
             appSettingsRepo = get<AppSettingsRepository>(),
-            appScope = get(named("AppScope"))
+            appScope = get(named("AppScope")),
         )
     }
 
@@ -107,6 +109,8 @@ val settingsModule = module {
     factoryOf(::GetResolvedConfigUseCase)
     factoryOf(::GetConfigDraftUseCase)
     factoryOf(::SaveConfigUseCase)
+    factoryOf(::DeleteConfigWithScopesUseCase)
+    factoryOf(::RestoreDeletedConfigSnapshotUseCase)
     factoryOf(::ExportBackupUseCase)
     factoryOf(::ParseBackupUseCase)
     factoryOf(::ValidateBackupUseCase)

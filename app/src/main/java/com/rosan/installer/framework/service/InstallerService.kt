@@ -18,7 +18,7 @@ import com.rosan.installer.data.session.handler.ActionHandler
 import com.rosan.installer.data.session.handler.BroadcastHandler
 import com.rosan.installer.data.session.handler.ForegroundInfoHandler
 import com.rosan.installer.data.session.handler.ProgressHandler
-import com.rosan.installer.data.session.manager.InstallerSessionManager
+import com.rosan.installer.data.session.manager.InstallerSessionManagerImpl
 import com.rosan.installer.data.session.repository.InstallerSessionRepositoryImpl
 import com.rosan.installer.domain.session.model.ProgressEntity
 import com.rosan.installer.domain.session.repository.InstallerSessionRepository
@@ -38,26 +38,29 @@ class InstallerService : Service() {
     companion object {
         const val EXTRA_ID = "id"
         private const val IDLE_TIMEOUT_MS = 1000L
+        private const val UI_EFFECT_DRAIN_DELAY_MS = 500L
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "installer_background_channel"
     }
 
     enum class Action(val value: String) {
         Ready("ready"),
-        Destroy("destroy");
+        Destroy("destroy"),
+        ;
 
         companion object {
             fun from(value: String?): Action? = entries.find { it.value == value }
         }
     }
 
-    private val sessionManager: InstallerSessionManager by inject()
+    private val sessionManager: InstallerSessionManagerImpl by inject()
 
     // Lifecycle scope for the Service itself (not specific installers)
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
 
     // Map storing scopes for each active session ID
     private val sessionScopes = mutableMapOf<String, CoroutineScope>()
+    private val uiEffectJobs = mutableMapOf<String, Job>()
 
     private var idleTimeoutJob: Job? = null
 
@@ -85,6 +88,7 @@ class InstallerService : Service() {
 
         when (Action.from(actionString)) {
             Action.Destroy -> stopServiceForcefully()
+
             Action.Ready -> {
                 if (id != null) {
                     sessionManager.get(id)?.let { session ->
@@ -95,7 +99,8 @@ class InstallerService : Service() {
                 }
             }
 
-            else -> { /* Ignore unknown actions */
+            else -> {
+                /* Ignore unknown actions */
             }
         }
 
@@ -154,11 +159,12 @@ class InstallerService : Service() {
                 ActionHandler(scope, session),
                 ProgressHandler(scope, session),
                 ForegroundInfoHandler(scope, session),
-                BroadcastHandler(scope, session)
+                BroadcastHandler(scope, session),
             )
 
             // Start observing UI effects (Toasts) on the main thread
-            observeUiEffectsForSession(session)
+            uiEffectJobs[id]?.cancel()
+            uiEffectJobs[id] = observeUiEffectsForSession(session)
 
             scope.launch {
                 Timber.d("[id=$id] Starting handlers.")
@@ -197,8 +203,10 @@ class InstallerService : Service() {
             action = Action.Destroy.value
         }
         val pendingCancel = PendingIntent.getService(
-            this, 0, cancelIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            this,
+            0,
+            cancelIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val settingsIntent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
@@ -207,8 +215,10 @@ class InstallerService : Service() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         val pendingSettings = PendingIntent.getActivity(
-            this, 1, settingsIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            this,
+            1,
+            settingsIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -234,7 +244,7 @@ class InstallerService : Service() {
             this,
             NOTIFICATION_ID,
             notification,
-            foregroundServiceType
+            foregroundServiceType,
         )
     }
 
@@ -243,9 +253,15 @@ class InstallerService : Service() {
      * to check if other installers are running.
      */
     private fun detachSession(id: String) {
+        val uiEffectJob: Job?
         synchronized(sessionScopes) {
             sessionScopes.remove(id)?.cancel()
+            uiEffectJob = uiEffectJobs.remove(id)
             Timber.d("[id=$id] Scope removed and cancelled.")
+        }
+        serviceScope.launch {
+            delay(UI_EFFECT_DRAIN_DELAY_MS)
+            uiEffectJob?.cancel()
         }
 
         // We do NOT remove from SessionManager here.
@@ -258,7 +274,7 @@ class InstallerService : Service() {
     private fun createNotificationChannel() {
         val channel = NotificationChannelCompat.Builder(
             CHANNEL_ID,
-            NotificationManagerCompat.IMPORTANCE_LOW
+            NotificationManagerCompat.IMPORTANCE_LOW,
         ).setName(getString(R.string.installer_background_channel_name))
             .setDescription(getString(R.string.installer_notification_desc))
             .build()
@@ -272,6 +288,8 @@ class InstallerService : Service() {
         synchronized(sessionScopes) {
             sessionScopes.values.forEach { it.cancel() }
             sessionScopes.clear()
+            uiEffectJobs.values.forEach { it.cancel() }
+            uiEffectJobs.clear()
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -279,10 +297,18 @@ class InstallerService : Service() {
 
     /**
      * Observes session progress to trigger UI effects like Toasts.
-     * Executed within serviceScope which runs on Dispatchers.Main.
+     * Kept on the service scope briefly after detach so terminal toast events can drain.
      */
-    private fun observeUiEffectsForSession(session: InstallerSessionRepository) {
-        serviceScope.launch {
+    private fun observeUiEffectsForSession(session: InstallerSessionRepository): Job = serviceScope.launch {
+        launch {
+            session.toastEvents.collect { message ->
+                if (session.shouldShowToast()) {
+                    toast(message)
+                }
+            }
+        }
+
+        launch {
             session.progress.collect { progress ->
                 // Disable toast according to user preference
                 if (!session.shouldShowToast()) return@collect
@@ -303,7 +329,8 @@ class InstallerService : Service() {
 
                     is ProgressEntity.InstallFailed,
                     is ProgressEntity.InstallAnalysedFailed,
-                    is ProgressEntity.InstallResolvedFailed -> {
+                    is ProgressEntity.InstallResolvedFailed,
+                    -> {
                         toast(R.string.installer_install_failed)
                     }
 
@@ -319,10 +346,9 @@ class InstallerService : Service() {
         }
     }
 
-    private suspend fun InstallerSessionRepository.shouldShowToast() =
-        when (this.config.toastMode) {
-            ToastMode.Disable -> false
-            ToastMode.BackgroundOnly -> this.background.first()
-            ToastMode.Always -> true
-        }
+    private suspend fun InstallerSessionRepository.shouldShowToast() = when (this.config.toastMode) {
+        ToastMode.Disable -> false
+        ToastMode.BackgroundOnly -> this.background.first()
+        ToastMode.Always -> true
+    }
 }

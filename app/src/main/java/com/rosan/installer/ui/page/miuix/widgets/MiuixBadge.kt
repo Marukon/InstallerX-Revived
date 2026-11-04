@@ -5,14 +5,19 @@ package com.rosan.installer.ui.page.miuix.widgets
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,18 +46,18 @@ fun MiuixBadge(
     text: String,
     modifier: Modifier = Modifier,
     textColor: Color = MiuixTheme.colorScheme.primary,
-    containerColor: Color = MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+    containerColor: Color = MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
 ) {
     Surface(
         // Set a minimum height to eliminate visual differences between languages
         modifier = modifier.defaultMinSize(minHeight = 24.dp),
         shape = CircleShape,
         color = containerColor,
-        contentColor = textColor
+        contentColor = textColor,
     ) {
         Box(
             modifier = Modifier.padding(horizontal = 8.dp),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = text,
@@ -61,19 +66,16 @@ fun MiuixBadge(
                 // Remove default font padding for accurate vertical centering
                 style = LocalTextStyle.current.copy(
                     platformStyle = PlatformTextStyle(
-                        includeFontPadding = false
-                    )
-                )
+                        includeFontPadding = false,
+                    ),
+                ),
             )
         }
     }
 }
 
 @Composable
-fun MiuixInfoChipGroup(
-    modifier: Modifier = Modifier,
-    notices: List<NoticeModel>
-) {
+fun MiuixInfoChipGroup(modifier: Modifier = Modifier, notices: List<NoticeModel>) {
     var selectedNotice by remember { mutableStateOf<NoticeModel?>(null) }
     val showDialog = remember { mutableStateOf(false) }
 
@@ -85,7 +87,7 @@ fun MiuixInfoChipGroup(
     FlowRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
     ) {
         notices.forEach { item ->
             MiuixBadge(
@@ -97,7 +99,7 @@ fun MiuixInfoChipGroup(
                     .clickable {
                         selectedNotice = item
                         showDialog.value = true
-                    }
+                    },
             )
         }
     }
@@ -107,7 +109,6 @@ fun MiuixInfoChipGroup(
             show = showDialog.value,
             title = selectedNotice!!.shortLabel,
             titleColor = selectedNotice!!.color,
-            summary = selectedNotice!!.fullDescription,
             onDismissRequest = {
                 showDialog.value = false
             },
@@ -115,17 +116,30 @@ fun MiuixInfoChipGroup(
                 selectedNotice = null
             },
             content = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.confirm),
-                        onClick = { showDialog.value = false }
-                    )
+                Column {
+                    SelectionContainer(
+                        modifier = Modifier
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        Text(
+                            text = selectedNotice!!.fullDescription,
+                            color = MiuixTheme.colorScheme.onSurface,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        TextButton(
+                            modifier = Modifier.weight(1f),
+                            text = stringResource(R.string.confirm),
+                            onClick = { showDialog.value = false },
+                        )
+                    }
                 }
-            }
+            },
         )
     }
 }

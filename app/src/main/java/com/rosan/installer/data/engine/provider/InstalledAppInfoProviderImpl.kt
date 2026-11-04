@@ -6,25 +6,27 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
-import com.rosan.installer.data.engine.parser.SignatureUtils
+import com.rosan.installer.core.bitmask.hasFlag
+import com.rosan.installer.data.engine.signature.InstalledPackageSignatureReader
 import com.rosan.installer.domain.engine.model.packageinfo.InstalledAppInfo
 import com.rosan.installer.domain.engine.provider.InstalledAppInfoProvider
-import com.rosan.installer.core.bitmask.hasFlag
 import com.rosan.installer.util.pm.compatVersionCode
 import com.rosan.installer.util.pm.isPackageArchivedCompat
 import java.io.File
 
 class InstalledAppInfoProviderImpl(
-    private val context: Context
+    private val context: Context,
+    private val installedPackageSignatureReader: InstalledPackageSignatureReader,
 ) : InstalledAppInfoProvider {
-    override fun getByPackageName(packageName: String): InstalledAppInfo? {
+    override fun getByPackageName(packageName: String, includeSignature: Boolean): InstalledAppInfo? {
         val packageManager = context.packageManager
-        val signatureHash = SignatureUtils.getInstalledAppSignatureHash(context, packageName)
+        val signatureInfo = if (includeSignature) installedPackageSignatureReader.read(packageName) else null
+        val signatureHash = signatureInfo?.primarySha256
         return try {
             val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 packageManager.getPackageInfo(
                     packageName,
-                    PackageManager.PackageInfoFlags.of(PackageManager.MATCH_UNINSTALLED_PACKAGES.toLong())
+                    PackageManager.PackageInfoFlags.of(PackageManager.MATCH_UNINSTALLED_PACKAGES.toLong()),
                 )
             } else {
                 @Suppress("DEPRECATION")
@@ -58,11 +60,12 @@ class InstalledAppInfoProviderImpl(
                 minSdk = applicationInfo?.minSdkVersion,
                 targetSdk = applicationInfo?.targetSdkVersion,
                 signatureHash = signatureHash,
+                signatureInfo = signatureInfo,
                 isSystemApp = flags.hasFlag(ApplicationInfo.FLAG_SYSTEM),
                 isUninstalled = isUninstalled,
                 isArchived = packageManager.isPackageArchivedCompat(packageName),
                 packageSize = packageSize,
-                sourceDir = applicationInfo?.sourceDir
+                sourceDir = applicationInfo?.sourceDir,
             )
         } catch (_: PackageManager.NameNotFoundException) {
             null
