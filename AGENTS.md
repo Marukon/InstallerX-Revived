@@ -18,7 +18,7 @@ For substantial features, invasive refactors, or behavior changes that span seve
 
 ## Read these first when relevant
 
-* `README.md` — product scope, supported install flows, user-facing feature boundaries.
+* `docs/README.md` — product scope, supported install flows, user-facing feature boundaries.
 * `CONTRIBUTING.md` — translation policy, build prerequisites, contribution expectations.
 * `.github/workflows/pr-check.yml` — the default CI build matrix used for pull requests.
 * `settings.gradle.kts`, `app/build.gradle.kts`, and
@@ -35,7 +35,7 @@ InstallerX Revived is a community-maintained Android installer with:
 * dialog, notification, and automatic installation flows,
 * support for APK, APKS, APKM, XAPK, APKs inside ZIP files, and batch APK installation,
 * profile-driven install options and install flags,
-* privileged workflows involving Root, Shizuku, Dhizuku, and hidden APIs,
+* privileged workflows involving Root, Shizuku, Dhizuku, `app_process`, system package manager mode, and hidden APIs,
 * switchable UI families based on Material 3 Expressive and Miuix.
 
 Several product behaviors are intentionally flow-specific. Do **not** assume a feature supported in dialog installation is also valid for notification or automatic installation unless the existing code and docs already establish that.
@@ -44,10 +44,10 @@ Several product behaviors are intentionally flow-specific. Do **not** assume a f
 
 ## Critical project constraints
 
-* Preserve the **online/offline** product boundary. The offline flavor must not silently gain network-only behavior or permissions.
+* Preserve the runtime network-access boundary. The unified APK may declare network permissions, but network requests must remain disabled when the in-app network setting is off.
 * Prefer the repository’s existing **native API** paths and abstractions. Do not introduce shell-command implementations as a shortcut unless the maintainer explicitly requests it.
 * Treat flow-specific behavior as flow-specific. A capability that exists for dialog installation is not automatically valid for notification or automatic installation.
-* When changing behavior that is described in `README.md`, update it or call out the documentation impact in the handoff.
+* When changing behavior that is described in `docs/README.md`, update it or call out the documentation impact in the handoff.
 
 ---
 
@@ -56,9 +56,11 @@ Several product behaviors are intentionally flow-specific. Do **not** assume a f
 ### Top-level areas
 
 * `app/` — main Android application.
+* `app-process/` — privileged helper process bridge used by Root/Shizuku-style workflows.
 * `hidden-api/` — hidden API declarations/helpers consumed by the app.
 * `build-plugins/` — shared Gradle convention plugins.
 * `baselineprofile/` — Android baseline profile generation.
+* `docs/` — localized project README files and user-facing repository documentation.
 * `.github/workflows/` — CI and release automation.
 
 Do not assume every top-level directory is an included Gradle module. Confirm active modules in
@@ -109,19 +111,19 @@ Never commit credentials, inline them into tracked files, or weaken the existing
 
 ### Standard smoke build
 
-For changes that do not affect connectivity flavors or variant-specific behavior, prefer the faster single-variant smoke build:
+For changes that do not affect variant-specific behavior, prefer the faster single-variant smoke build:
 
 ```bash
-./gradlew assembleOnlineUnstableDebug \
-  -PAPP_ID="com.rosan.installer.x.revived.test"
+./gradlew assembleUnstableDebug
 ```
 
-Use the full PR-CI pair when the change can reasonably affect app compilation across connectivity flavors, resources, dependency wiring, or variant-sensitive behavior:
+Use the PR-equivalent build when the change can reasonably affect app compilation, resources, dependency wiring, or variant-sensitive behavior:
 
 ```bash
-./gradlew assembleOnlinePreviewDebug assembleOfflinePreviewDebug \
-  -PAPP_ID="com.rosan.installer.x.revived.test"
+./gradlew assemblePreviewDebug
 ```
+
+For local agent-run verification, do not pass a custom `APP_ID` unless the maintainer explicitly asks for an alternate application ID.
 
 ### Report verification honestly
 
@@ -139,12 +141,8 @@ Do not imply a build or test passed unless it actually did.
 
 ### Flavors and build levels
 
-The app currently uses two flavor dimensions:
+The app currently uses one flavor dimension:
 
-* connectivity:
-
-    * `online`
-    * `offline`
 * level:
 
     * `Unstable`
@@ -153,7 +151,6 @@ The app currently uses two flavor dimensions:
 
 Important build behavior includes:
 
-* connectivity-specific `INTERNET_ACCESS_ENABLED`,
 * build-level-specific `BUILD_LEVEL`,
 * git-hash version suffixes for unstable/preview outputs,
 * an optional `VERSION_NAME` Gradle override for release automation.
@@ -211,7 +208,6 @@ When introducing a new injectable dependency:
 * Monet setup for older platform versions,
 * conditional logging setup,
 * Koin bootstrap,
-* privileged auto-lock service initialization.
 
 Treat the order and presence of this startup logic as sensitive. Do not reorder or remove initialization steps unless the task requires it and the consequences are understood.
 
@@ -385,6 +381,68 @@ For implementation tasks, follow this order:
     * what remains unverified.
 
 Prefer targeted, reviewable edits over sweeping refactors.
+
+---
+
+## Commit message and submission discipline
+
+Do not create commits, push branches, or open pull requests unless the maintainer explicitly asks for that.
+
+Before preparing a commit message:
+
+* inspect `git status` and the relevant diff,
+* decide whether the change is one coherent change or multiple independent changes,
+* include only files related to the requested task,
+* do not include user-owned unrelated changes, generated artifacts, credentials, local IDE files, or build outputs.
+
+Write commit messages in the repository's Conventional Commits style.
+
+Subject format is mandatory:
+
+```text
+type: short lowercase description
+type(scope): short lowercase description
+```
+
+Use only these top-level types unless the maintainer explicitly asks for another one:
+
+* `fix:` — bug fixes, behavior corrections, compatibility fixes, UI defects, build fixes.
+* `feat:` — new user-facing or maintainer-facing capabilities.
+* `refactor:` — code restructuring without intended behavior changes.
+* `docs:` — documentation-only changes.
+* `i18n:` — translation-only updates, especially Weblate-style changes.
+* `fix(deps):` — dependency update commits.
+
+Subject rules:
+
+* keep the subject at or below 72 characters,
+* use lowercase after the type prefix unless naming a proper noun, API, class, or UI brand,
+* use imperative mood after the prefix,
+* describe behavior or developer intent rather than listing files,
+* include a concise body for most non-trivial commits, especially when the change has multiple behavior points, important intent, or risk,
+* use a one-line message only for trivial, self-evident changes,
+* use bullets only for genuinely separate changes, risks, or dependency groups,
+* avoid generic wording such as "Refined", "Enhanced", "Improved", or "Updated",
+* do not invent issue numbers, user impact, names, emails, or identifiers,
+* do not add AI signatures, `Co-authored-by`, or generated-by trailers unless explicitly requested.
+
+Examples that match repository style:
+
+* `fix: restore config scopes on undo`
+* `fix: fix Miuix sheet dismissal behavior`
+* `feat: add smart authorizer fallback settings`
+* `refactor: define explicit parameters for ShizukuUserServiceRecycler`
+* `docs: document agent submission and repo layout`
+
+For dependency changes:
+
+* explicitly list package, library, plugin, or tool names,
+* include version changes in `from -> to` form when available,
+* mention scope when inferable, such as runtime, build plugin, Gradle, Maven, npm, or pnpm,
+* if the change is primarily dependency updates, start the subject with `fix(deps):`,
+* do not collapse unrelated dependency updates into vague wording like "update dependencies" or "bump deps".
+
+If verification was not run or did not pass, do not write the commit or handoff as though it was verified.
 
 ---
 

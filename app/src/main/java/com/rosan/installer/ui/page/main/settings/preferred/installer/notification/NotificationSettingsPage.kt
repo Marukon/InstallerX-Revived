@@ -5,19 +5,11 @@
 package com.rosan.installer.ui.page.main.settings.preferred.installer.notification
 
 import android.os.Build
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,10 +48,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun NotificationSettingsPage(
-    useBlur: Boolean,
-    viewModel: NotificationSettingsViewModel = koinViewModel()
-) {
+fun NotificationSettingsPage(useBlur: Boolean, viewModel: NotificationSettingsViewModel = koinViewModel()) {
     val navigator = LocalNavigator.current
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val capabilityProvider = koinInject<DeviceCapabilityProvider>()
@@ -71,9 +59,6 @@ fun NotificationSettingsPage(
     LaunchedEffect(Unit) {
         topAppBarState.heightOffset = topAppBarState.heightOffsetLimit
     }
-
-    val layoutDirection = LocalLayoutDirection.current
-    val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
 
     val isModernEligible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA
     val isMiIslandSupported = capabilityProvider.isSupportMiIsland
@@ -124,39 +109,44 @@ fun NotificationSettingsPage(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backdrop.getMaterial3AppBarColor(),
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    scrolledContainerColor = backdrop.getMaterial3AppBarColor()
-                )
+                    scrolledContainerColor = backdrop.getMaterial3AppBarColor(),
+                ),
             )
-        }
+        },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-                bottom = paddingValues.calculateBottomPadding()
-            )
+            contentPadding = paddingValues,
         ) {
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.notification_style)
+                    title = stringResource(R.string.notification_style),
                 ) {
                     item {
                         val isStyleSelectionEnabled = isModernEligible || isMiIslandSupported
                         DropDownMenuWidget(
                             icon = AppIcons.Palette,
                             title = stringResource(R.string.notification_style),
-                            description = if (isStyleSelectionEnabled) styleNames[selectedIndex] else stringResource(R.string.notification_style_unsupported_desc),
+                            description = if (isStyleSelectionEnabled) {
+                                styleNames[selectedIndex]
+                            } else {
+                                stringResource(
+                                    R.string.notification_style_unsupported_desc,
+                                )
+                            },
                             enabled = isStyleSelectionEnabled,
                             choice = selectedIndex,
                             data = styleNames,
                             onChoiceChange = { index ->
                                 val selectedStyle = styleOptions[index]
-                                viewModel.dispatch(NotificationSettingsAction.ChangeStyle(selectedStyle))
-                            }
+                                viewModel.dispatch(
+                                    NotificationSettingsAction.ChangeStyle(
+                                        selectedStyle,
+                                    ),
+                                )
+                            },
                         )
                     }
                     item(animatedVisibility = activeStyle == NotificationStyle.MI_ISLAND) {
@@ -166,8 +156,12 @@ fun NotificationSettingsPage(
                             description = stringResource(id = R.string.lab_mi_island_bypass_restriction_desc),
                             checked = uiState.miIslandBypassRestriction,
                             onCheckedChange = {
-                                viewModel.dispatch(NotificationSettingsAction.ChangeMiIslandBypassRestriction(it))
-                            }
+                                viewModel.dispatch(
+                                    NotificationSettingsAction.ChangeMiIslandBypassRestriction(
+                                        it,
+                                    ),
+                                )
+                            },
                         )
                     }
                     item(animatedVisibility = activeStyle == NotificationStyle.MI_ISLAND && uiState.miIslandBypassRestriction) {
@@ -180,8 +174,12 @@ fun NotificationSettingsPage(
                                 startInt = 50,
                                 endInt = 350,
                                 onValueChange = {
-                                    viewModel.dispatch(NotificationSettingsAction.ChangeMiIslandBlockingInterval(it))
-                                }
+                                    viewModel.dispatch(
+                                        NotificationSettingsAction.ChangeMiIslandBlockingInterval(
+                                            it,
+                                        ),
+                                    )
+                                },
                             )
                         }
                     }
@@ -192,15 +190,19 @@ fun NotificationSettingsPage(
                             description = stringResource(id = R.string.lab_mi_island_outer_glow_desc),
                             checked = uiState.miIslandOuterGlow,
                             onCheckedChange = {
-                                viewModel.dispatch(NotificationSettingsAction.ChangeMiIslandOuterGlow(it))
-                            }
+                                viewModel.dispatch(
+                                    NotificationSettingsAction.ChangeMiIslandOuterGlow(
+                                        it,
+                                    ),
+                                )
+                            },
                         )
                     }
                 }
             }
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.config_label_preferences)
+                    title = stringResource(R.string.config_label_preferences),
                 ) {
                     item {
                         SwitchWidget(
@@ -209,8 +211,12 @@ fun NotificationSettingsPage(
                             description = stringResource(id = R.string.change_notification_touch_behavior),
                             checked = uiState.showDialogOnPress,
                             onCheckedChange = {
-                                viewModel.dispatch(NotificationSettingsAction.ChangeShowDialogOnPress(it))
-                            }
+                                viewModel.dispatch(
+                                    NotificationSettingsAction.ChangeShowDialogOnPress(
+                                        it,
+                                    ),
+                                )
+                            },
                         )
                     }
 
@@ -218,14 +224,16 @@ fun NotificationSettingsPage(
                         AutoClearNotificationTimeWidget(
                             currentValue = uiState.successAutoClearSeconds,
                             onValueChange = { seconds ->
-                                viewModel.dispatch(NotificationSettingsAction.ChangeAutoClearSeconds(seconds))
-                            }
+                                viewModel.dispatch(
+                                    NotificationSettingsAction.ChangeAutoClearSeconds(
+                                        seconds,
+                                    ),
+                                )
+                            },
                         )
                     }
                 }
             }
-
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }
@@ -234,10 +242,7 @@ fun NotificationSettingsPage(
  * A DropDownMenuWidget for selecting the auto-clear time for success notifications.
  */
 @Composable
-private fun AutoClearNotificationTimeWidget(
-    currentValue: Int,
-    onValueChange: (Int) -> Unit
-) {
+private fun AutoClearNotificationTimeWidget(currentValue: Int, onValueChange: (Int) -> Unit) {
     val options = remember { listOf(0, 3, 5, 10, 15, 20, 30) }
 
     val selectedIndex = remember(currentValue, options) {
@@ -250,7 +255,7 @@ private fun AutoClearNotificationTimeWidget(
     } else {
         stringResource(
             R.string.installer_settings_auto_clear_time_seconds_format_desc,
-            currentOption
+            currentOption,
         )
     }
 
@@ -273,6 +278,6 @@ private fun AutoClearNotificationTimeWidget(
             if (currentValue != newValue) {
                 onValueChange(newValue)
             }
-        }
+        },
     )
 }

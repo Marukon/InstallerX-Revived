@@ -2,16 +2,21 @@
 // Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.domain.engine.usecase
 
-import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.core.device.model.Architecture
+import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
-import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.model.packageinfo.PackageAnalysisResult
 import com.rosan.installer.domain.engine.model.packageinfo.PackageIdentityStatus
 import com.rosan.installer.domain.engine.model.packageinfo.SignatureMatchStatus
+import com.rosan.installer.domain.engine.model.packageinfo.SignatureVerificationStatus
+import com.rosan.installer.domain.engine.model.packageinfo.SigningBlockCertificateStatus
+import com.rosan.installer.domain.engine.model.packageinfo.aospSigningKeys
+import com.rosan.installer.domain.engine.model.packageinfo.selectedSigningBlockCertificateStatus
+import com.rosan.installer.domain.engine.model.source.DataType
 import com.rosan.installer.domain.engine.model.state.DomainInstallState
 import com.rosan.installer.domain.engine.model.state.InstallActionType
 import com.rosan.installer.domain.engine.model.state.InstallNotice
+import com.rosan.installer.domain.engine.model.state.SignatureNoticeDetails
 
 class AnalyzeInstallStateUseCase {
 
@@ -27,7 +32,12 @@ class AnalyzeInstallStateUseCase {
         containerType: DataType?,
         systemArch: Architecture,
         systemSdkInt: Int,
-        detectXposedModule: Boolean = true
+        checkOplusOsdk: Boolean = false,
+        deviceOplusOsdkVersion: String? = null,
+        checkAppSignature: Boolean = true,
+        showSignatureInfoOnMatch: Boolean = false,
+        showSignatureDetails: Boolean = false,
+        detectXposedModule: Boolean = true,
     ): DomainInstallState {
         val oldInfo = currentPackage.installedAppInfo
         val notices = mutableListOf<InstallNotice>()
@@ -56,18 +66,113 @@ class AnalyzeInstallStateUseCase {
         }
 
         // 2. Check Signature Status
-        if (!isSplitUpdateMode && (containerType == DataType.APK || containerType == DataType.APKS)) {
-            when (currentPackage.signatureMatchStatus) {
-                SignatureMatchStatus.MISMATCH -> {
-                    notices.add(0, InstallNotice.SignatureMismatch)
-                    actionType = InstallActionType.SIGNATURE_MISMATCH_INSTALL_ANYWAY
-                }
+        if (checkAppSignature && containerType.supportsApkSignatureAnalysis()) {
+            val signatureAnalysis = currentPackage.signatureAnalysis
+            val hasPackageSignatureIssues = signatureAnalysis.hasIssues
+            val pendingSignatureInfo = entityToInstall?.signatureInfo
+                ?: (primaryEntity as? AppEntity.BaseEntity)?.signatureInfo
+            val fullSignatureNoticeDetails = SignatureNoticeDetails(
+                pendingSignatureInfo = pendingSignatureInfo,
+                installedSignatureInfo = currentPackage.installedAppInfo?.signatureInfo,
+                packageSignatureAnalysis = signatureAnalysis,
+            )
+            val signatureNoticeDetails = fullSignatureNoticeDetails.takeIf { showSignatureDetails }
 
-                SignatureMatchStatus.UNKNOWN_ERROR -> {
-                    notices.add(0, InstallNotice.SignatureUnknown)
+            val aospKeys = buildSet {
+                for (entity in currentPackage.appEntities) {
+                    if (!entity.selected) continue
+                    val signature = when (val app = entity.app) {
+                        is AppEntity.BaseEntity -> app.signatureInfo
+                        is AppEntity.SplitEntity -> app.signatureInfo
+                        else -> null
+                    }
+                    signature?.aospSigningKeys()?.let { addAll(it) }
                 }
+            }
+            if (aospKeys.isNotEmpty()) notices.add(InstallNotice.AospSignature(aospKeys))
 
-                else -> {}
+            if (pendingSignatureInfo?.verificationStatus == SignatureVerificationStatus.SIGNING_BLOCK_ONLY) {
+                notices.add(
+                    0,
+                    InstallNotice.SigningBlockOnly(
+                        certificateStatus = currentPackage.selectedSigningBlockCertificateStatus()
+                            ?: SigningBlockCertificateStatus.UNKNOWN,
+                        details = signatureNoticeDetails,
+                    ),
+                )
+            } else if (!currentPackage.signatureCheckPerformed) {
+                // Signature analysis was unavailable or disabled for this source.
+            } else if (isSplitUpdateMode) {
+                if (hasPackageSignatureIssues) {
+                    notices.add(
+                        0,
+                        InstallNotice.SignatureSummary(
+                            status = SignatureMatchStatus.UNKNOWN_ERROR,
+                            details = signatureNoticeDetails,
+                            hasPackageSignatureIssues = true,
+                        ),
+                    )
+                }
+            } else {
+                when (currentPackage.signatureMatchStatus) {
+                    SignatureMatchStatus.NOT_INSTALLED -> {
+                        if (showSignatureInfoOnMatch || hasPackageSignatureIssues) {
+                            notices.add(
+                                InstallNotice.SignatureSummary(
+                                    status = currentPackage.signatureMatchStatus,
+                                    details = signatureNoticeDetails,
+                                    hasPackageSignatureIssues = hasPackageSignatureIssues,
+                                ),
+                            )
+                        }
+                    }
+
+                    SignatureMatchStatus.MATCH -> {
+                        if (showSignatureInfoOnMatch || hasPackageSignatureIssues) {
+                            notices.add(
+                                InstallNotice.SignatureSummary(
+                                    status = currentPackage.signatureMatchStatus,
+                                    details = signatureNoticeDetails,
+                                    hasPackageSignatureIssues = hasPackageSignatureIssues,
+                                ),
+                            )
+                        }
+                    }
+
+                    SignatureMatchStatus.ROTATION_COMPATIBLE,
+                    SignatureMatchStatus.CANDIDATE_ROTATION_UNCONFIRMED,
+                    -> {
+                        notices.add(
+                            0,
+                            InstallNotice.SignatureSummary(
+                                status = currentPackage.signatureMatchStatus,
+                                details = signatureNoticeDetails,
+                                hasPackageSignatureIssues = hasPackageSignatureIssues,
+                            ),
+                        )
+                    }
+
+                    SignatureMatchStatus.MISMATCH -> {
+                        notices.add(
+                            0,
+                            InstallNotice.SignatureMismatch(
+                                details = signatureNoticeDetails,
+                                hasPackageSignatureIssues = hasPackageSignatureIssues,
+                            ),
+                        )
+                        actionType = InstallActionType.SIGNATURE_MISMATCH_INSTALL_ANYWAY
+                    }
+
+                    SignatureMatchStatus.UNKNOWN_ERROR -> {
+                        notices.add(
+                            0,
+                            InstallNotice.SignatureUnknown(
+                                details = signatureNoticeDetails,
+                                hasPackageSignatureIssues = hasPackageSignatureIssues,
+                            ),
+                        )
+                    }
+                }
             }
         }
 
@@ -75,6 +180,19 @@ class AnalyzeInstallStateUseCase {
         val newMinSdk = entityToInstall?.minSdk?.toIntOrNull()
         if (newMinSdk != null && newMinSdk > systemSdkInt) {
             notices.add(0, InstallNotice.SdkIncompatible)
+        }
+
+        val isOplusOsdkIncompatible = checkOplusOsdk &&
+            entityToInstall?.sourceType == DataType.APK &&
+            isOplusOsdkIncompatible(entityToInstall.minOsdkVersion, deviceOplusOsdkVersion)
+        if (isOplusOsdkIncompatible) {
+            notices.add(
+                0,
+                InstallNotice.OplusOsdkIncompatible(
+                    required = requireNotNull(entityToInstall.minOsdkVersion),
+                    device = requireNotNull(deviceOplusOsdkVersion),
+                ),
+            )
         }
 
         // 4. Check Architecture Compatibility
@@ -110,12 +228,24 @@ class AnalyzeInstallStateUseCase {
                     InstallNotice.Xposed(
                         minApi = xposedInfo.minApi,
                         targetApi = xposedInfo.targetApi,
-                        description = xposedInfo.description
-                    )
+                        description = xposedInfo.description,
+                    ),
                 )
             }
         }
 
-        return DomainInstallState(actionType, notices)
+        return DomainInstallState(actionType, notices, isOplusOsdkIncompatible)
+    }
+
+    private fun DataType?.supportsApkSignatureAnalysis() = when (this) {
+        DataType.APK,
+        DataType.APKS,
+        DataType.APKM,
+        DataType.XAPK,
+        DataType.MULTI_APK,
+        DataType.MULTI_APK_ZIP,
+        -> true
+
+        else -> false
     }
 }

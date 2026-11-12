@@ -14,12 +14,12 @@ class SaveConfigUseCase(private val configRepo: ConfigRepository) {
         NAME_EMPTY,
         CUSTOM_AUTHORIZER_EMPTY,
         INSTALLER_EMPTY,
-        REQUESTER_NOT_FOUND
+        REQUESTER_NOT_FOUND,
     }
 
     class SaveConfigException(val error: Error) : Exception("Save config failed: ${error.name}")
 
-    suspend operator fun invoke(model: ConfigModel, hasRequesterUid: Boolean): Result<Unit> {
+    suspend operator fun invoke(model: ConfigModel, hasRequesterUid: Boolean, installerRequired: Boolean = true): Result<Unit> {
         // Business rule validations
         if (model.name.isEmpty()) {
             return Result.failure(SaveConfigException(Error.NAME_EMPTY))
@@ -30,7 +30,7 @@ class SaveConfigUseCase(private val configRepo: ConfigRepository) {
         if (model.installRequesterMode == InstallRequesterMode.Custom && !hasRequesterUid) {
             return Result.failure(SaveConfigException(Error.REQUESTER_NOT_FOUND))
         }
-        if (model.installerMode == InstallerMode.Custom && model.installer.isNullOrBlank()) {
+        if (installerRequired && model.installerMode == InstallerMode.Custom && model.installer.isNullOrBlank()) {
             return Result.failure(SaveConfigException(Error.INSTALLER_EMPTY))
         }
 

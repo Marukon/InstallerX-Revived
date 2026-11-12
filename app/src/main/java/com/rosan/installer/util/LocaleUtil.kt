@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.util
 
 /**
@@ -7,17 +9,24 @@ package com.rosan.installer.util
  * Logic is from the PackageUtil.kt file in the PackageInstaller project.
  * Under Apache License 2.0.
  *
- * @param this The legacy language code to be converted.
+ * @receiver The legacy language code to be converted.
  * @return The modern language code.
  * @see <a href="https://developer.android.com/reference/java/util/Locale#legacy-language-codes">java.util.Locale#legacy-language-codes</a>
  * @see <a href="https://github.com/vvb2060/PackageInstaller/blob/master/app/src/main/java/io/github/vvb2060/packageinstaller/model/PackageUtil.kt">PackageUtil</a>
  * @see <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
  */
-fun String.convertLegacyLanguageCode(): String =
-    when (this) {
-        "in" -> "id" // Indonesian
-        "iw" -> "he" // Hebrew
-        "ji" -> "yi" // Yiddish
-        "tl" -> "fil" // Tagalog -> Filipino
-        else -> this
-    }
+fun String.convertLegacyLanguageCode(): String = when (this) {
+    "in" -> "id"
+
+    // Indonesian
+    "iw" -> "he"
+
+    // Hebrew
+    "ji" -> "yi"
+
+    // Yiddish
+    "tl" -> "fil"
+
+    // Tagalog -> Filipino
+    else -> this
+}

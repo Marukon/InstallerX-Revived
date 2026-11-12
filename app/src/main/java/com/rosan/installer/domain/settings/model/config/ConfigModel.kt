@@ -2,8 +2,9 @@
 // Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.domain.settings.model.config
 
-import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.core.device.model.Manufacturer
+import com.rosan.installer.core.env.DeviceConfig
+import com.rosan.installer.domain.session.model.InstallSourceConfidence
 
 /**
  * Represents the complete business object for a configuration
@@ -15,6 +16,7 @@ data class ConfigModel(
     val authorizer: Authorizer,
     val customizeAuthorizer: String,
     val installMode: InstallMode,
+    val autoApproveSession: Boolean = false,
     val toastMode: ToastMode = ToastMode.Disable,
     val enableCustomizeInstallReason: Boolean = false,
     val installReason: InstallReason = InstallReason.UNKNOWN,
@@ -38,8 +40,8 @@ data class ConfigModel(
     val allowDowngrade: Boolean = false,
     val bypassLowTargetSdk: Boolean = false,
     val allowAllRequestedPermissions: Boolean = false,
-    val allowSigMismatch: Boolean = false,
-    val allowSigUnknown: Boolean = false,
+    val allowSigMismatch: Boolean = true,
+    val allowSigUnknown: Boolean = true,
     val requestUpdateOwnership: Boolean = false,
     val splitChooseAll: Boolean = false,
     val apkChooseAll: Boolean = false,
@@ -58,7 +60,11 @@ data class ConfigModel(
     val uninstallFlags: Int = 0,
     val callingFromUid: Int? = null,
     val initiatorPackageName: String? = null,
-    val allowInstallWithoutUserAction: Boolean = false
+    val installSourceUid: Int? = null,
+    val installSourcePackageCandidates: List<String> = emptyList(),
+    val installSourceConfidence: InstallSourceConfidence = InstallSourceConfidence.UNKNOWN,
+    val notUnknownSource: Boolean = false,
+    val allowInstallWithoutUserAction: Boolean = false,
 ) {
     companion object {
         var default = ConfigModel(
@@ -66,6 +72,7 @@ data class ConfigModel(
             authorizer = Authorizer.Global,
             customizeAuthorizer = "",
             installMode = InstallMode.Dialog,
+            autoApproveSession = false,
             toastMode = ToastMode.Disable,
             enableCustomizeInstallReason = false,
             installReason = InstallReason.UNKNOWN,
@@ -91,8 +98,8 @@ data class ConfigModel(
             requestUpdateOwnership = false,
             splitChooseAll = false,
             apkChooseAll = false,
-            allowSigMismatch = false,
-            allowSigUnknown = false
+            allowSigMismatch = true,
+            allowSigUnknown = true,
         )
 
         val XiaomiDefault = ConfigModel(
@@ -100,6 +107,7 @@ data class ConfigModel(
             authorizer = Authorizer.Global,
             customizeAuthorizer = "",
             installMode = InstallMode.Dialog,
+            autoApproveSession = false,
             toastMode = ToastMode.Disable,
             enableCustomizeInstallReason = false,
             installReason = InstallReason.UNKNOWN,
@@ -125,14 +133,13 @@ data class ConfigModel(
             requestUpdateOwnership = false,
             splitChooseAll = false,
             apkChooseAll = false,
-            allowSigMismatch = false,
-            allowSigUnknown = false
+            allowSigMismatch = true,
+            allowSigUnknown = true,
         )
 
-        fun generateOptimalDefault(): ConfigModel =
-            when (DeviceConfig.currentManufacturer) {
-                Manufacturer.XIAOMI -> XiaomiDefault
-                else -> default
-            }
+        fun generateOptimalDefault(): ConfigModel = when (DeviceConfig.currentManufacturer) {
+            Manufacturer.XIAOMI -> XiaomiDefault
+            else -> default
+        }
     }
 }

@@ -27,28 +27,21 @@ import com.rosan.installer.R
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
 import com.rosan.installer.domain.session.model.InstallResult
 import com.rosan.installer.ui.icons.AppMiuixIcons
-import com.rosan.installer.ui.theme.InstallerTheme
-import com.rosan.installer.ui.theme.miuixSheetCardColorDark
+import com.rosan.installer.ui.theme.miuixSheetCardColors
 import com.rosan.installer.ui.util.isGestureNavigation
 import com.rosan.installer.util.help
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardColors
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Composable
-fun InstallCompletedContent(
-    results: List<InstallResult>,
-    onClose: () -> Unit
-) {
-    val isDarkMode = InstallerTheme.isDark
+fun InstallCompletedContent(results: List<InstallResult>, onClose: () -> Unit) {
     val filteredResults = remember(results) {
         results
             // 1. Group by packageName
@@ -67,7 +60,7 @@ fun InstallCompletedContent(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(modifier = Modifier.weight(1f, fill = false)) {
             LazyColumn(
@@ -77,12 +70,11 @@ fun InstallCompletedContent(
                     .overScrollVertical(),
                 overscrollEffect = null,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
+                contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 items(filteredResults, key = { it.entity.app.packageName + it.entity.app.name }) { result ->
                     MiuixResultItemCard(
-                        isDarkMode = isDarkMode,
-                        result = result
+                        result = result,
                     )
                 }
             }
@@ -98,49 +90,42 @@ fun InstallCompletedContent(
                 onClick = onClose,
                 text = stringResource(R.string.finish),
                 colors = ButtonDefaults.textButtonColorsPrimary(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
 }
 
 @Composable
-private fun MiuixResultItemCard(
-    result: InstallResult,
-    isDarkMode: Boolean
-) {
+private fun MiuixResultItemCard(result: InstallResult) {
     val app = result.entity.app
     val appLabel = (app as? AppEntity.BaseEntity)?.label ?: app.packageName
-    val cardColor = if (isDynamicColor) MiuixTheme.colorScheme.surfaceContainer else
-        if (isDarkMode) miuixSheetCardColorDark else Color.White
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardColors(
-            color = cardColor,
-            contentColor = MiuixTheme.colorScheme.onSurface
-        )
+        colors = miuixSheetCardColors(),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column {
                 Text(
                     text = appLabel,
-                    style = MiuixTheme.textStyles.headline1
+                    style = MiuixTheme.textStyles.headline1,
                 )
                 Text(
                     text = app.packageName,
                     style = MiuixTheme.textStyles.subtitle,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
 
-            if (result.success)
+            if (result.success) {
                 MiuixSuccessRow()
-            else if (result.error != null)
+            } else if (result.error != null) {
                 MiuixCompletedErrorCardContent(error = result.error)
+            }
         }
     }
 }
@@ -150,26 +135,23 @@ private fun MiuixSuccessRow() {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(
             imageVector = AppMiuixIcons.Ok,
             contentDescription = "Success",
-            tint = MiuixTheme.colorScheme.primary
+            tint = MiuixTheme.colorScheme.primary,
         )
         Text(
             text = stringResource(R.string.installer_install_success),
             style = MiuixTheme.textStyles.headline1,
-            color = MiuixTheme.colorScheme.primary
+            color = MiuixTheme.colorScheme.primary,
         )
     }
 }
 
 @Composable
-private fun MiuixCompletedErrorCardContent(
-    error: Throwable,
-    modifier: Modifier = Modifier
-) {
+private fun MiuixCompletedErrorCardContent(error: Throwable, modifier: Modifier = Modifier) {
     val isDark = isSystemInDarkTheme()
     val contentColor = if (isDark) MiuixTheme.colorScheme.onSurface else Color(0xFF601A15)
 
@@ -179,18 +161,18 @@ private fun MiuixCompletedErrorCardContent(
                 .fillMaxWidth()
                 .padding(top = 12.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
                 imageVector = AppMiuixIcons.Close,
                 contentDescription = stringResource(R.string.installer_install_failed),
-                tint = contentColor
+                tint = contentColor,
             )
             Text(
                 text = error.help(),
                 fontWeight = FontWeight.Bold,
                 style = MiuixTheme.textStyles.body1,
-                color = contentColor
+                color = contentColor,
             )
         }
 
@@ -198,7 +180,7 @@ private fun MiuixCompletedErrorCardContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 0.dp),
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.outline,
         )
 
         Text(
@@ -207,7 +189,7 @@ private fun MiuixCompletedErrorCardContent(
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 12.dp)
+                .padding(top = 8.dp, bottom = 12.dp),
         )
     }
 }

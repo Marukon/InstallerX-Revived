@@ -4,9 +4,9 @@ package com.rosan.installer.ui.page.main.settings.config.edit
 
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.config.DexoptMode
-import com.rosan.installer.domain.settings.model.config.InstallRequesterMode
 import com.rosan.installer.domain.settings.model.config.InstallMode
 import com.rosan.installer.domain.settings.model.config.InstallReason
+import com.rosan.installer.domain.settings.model.config.InstallRequesterMode
 import com.rosan.installer.domain.settings.model.config.InstallerMode
 import com.rosan.installer.domain.settings.model.config.PackageSource
 import com.rosan.installer.domain.settings.model.config.ToastMode
@@ -17,6 +17,7 @@ sealed interface EditViewAction {
     data class ChangeDataAuthorizer(val authorizer: Authorizer) : EditViewAction
     data class ChangeDataCustomizeAuthorizer(val customizeAuthorizer: String) : EditViewAction
     data class ChangeDataInstallMode(val installMode: InstallMode) : EditViewAction
+    data class ChangeDataAutoApproveSession(val autoApproveSession: Boolean) : EditViewAction
     data class ChangeDataToastMode(val toastMode: ToastMode) : EditViewAction
     data class ChangeDataEnableCustomizePackageSource(val enable: Boolean) : EditViewAction
     data class ChangeDataPackageSource(val packageSource: PackageSource) : EditViewAction

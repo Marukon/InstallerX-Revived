@@ -4,21 +4,13 @@ package com.rosan.installer.ui.page.main.settings.preferred.about
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -45,7 +37,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -70,13 +61,11 @@ import com.rosan.installer.ui.theme.installerMaterial3BlurEffect
 import com.rosan.installer.ui.theme.rememberMaterial3BlurBackdrop
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun AboutPage(
-    useBlur: Boolean,
-    viewModel: AboutViewModel = koinViewModel()
-) {
+fun AboutPage(useBlur: Boolean, viewModel: AboutViewModel = koinViewModel()) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val uiState by viewModel.state.collectAsStateWithLifecycle()
@@ -86,9 +75,6 @@ fun AboutPage(
     var showBottomSheet by remember { mutableStateOf(false) }
 
     LogEventCollector(viewModel)
-
-    val layoutDirection = LocalLayoutDirection.current
-    val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
 
     val topBarBackdrop = rememberMaterial3BlurBackdrop(useBlur)
     val upgradeIndicatorBackdrop = rememberMaterial3BlurBackdrop(useBlur)
@@ -114,8 +100,8 @@ fun AboutPage(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = topBarBackdrop.getMaterial3AppBarColor(),
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    scrolledContainerColor = topBarBackdrop.getMaterial3AppBarColor()
-                )
+                    scrolledContainerColor = topBarBackdrop.getMaterial3AppBarColor(),
+                ),
             )
         },
     ) { paddingValues ->
@@ -123,33 +109,28 @@ fun AboutPage(
             modifier = Modifier
                 .fillMaxSize()
                 .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-                bottom = paddingValues.calculateBottomPadding()
-            ),
-            horizontalAlignment = Alignment.CenterHorizontally
+            contentPadding = paddingValues,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item {
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
-                        .padding(top = 8.dp, bottom = 12.dp)
+                        .padding(top = 8.dp, bottom = 12.dp),
                 ) {
                     StatusWidget(viewModel, useBlur)
                 }
             }
             item {
                 SegmentedColumn(
-                    title = stringResource(R.string.about)
+                    title = stringResource(R.string.about),
                 ) {
                     item {
                         NavigationItemWidget(
                             icon = AppIcons.ViewSourceCode,
                             title = stringResource(R.string.get_source_code),
                             description = stringResource(R.string.get_source_code_detail),
-                            onClick = { uriHandler.openUri("https://github.com/wxxsfxyzm/InstallerX-Revived") }
+                            onClick = { uriHandler.openUri("https://github.com/wxxsfxyzm/InstallerX-Revived") },
                         )
                     }
                     item {
@@ -157,7 +138,7 @@ fun AboutPage(
                             icon = AppIcons.OpenSourceLicense,
                             title = stringResource(R.string.open_source_license),
                             description = stringResource(R.string.open_source_license_settings_description),
-                            onClick = { navigator.push(Route.OpenSourceLicense) }
+                            onClick = { navigator.push(Route.OpenSourceLicense) },
                         )
                     }
                     item {
@@ -165,24 +146,25 @@ fun AboutPage(
                             icon = AppIcons.Update,
                             title = stringResource(R.string.get_update),
                             description = stringResource(R.string.get_update_detail),
-                            onClick = { showBottomSheet = true }
+                            onClick = { showBottomSheet = true },
                         )
                     }
-                    if (uiState.hasUpdate)
+                    if (uiState.hasUpdate) {
                         item {
                             NavigationItemWidget(
                                 icon = AppIcons.Download,
                                 title = stringResource(R.string.get_update_directly),
                                 description = stringResource(R.string.get_update_directly_desc),
-                                onClick = { viewModel.dispatch(AboutAction.PerformUpdate) }
+                                onClick = { viewModel.dispatch(AboutAction.PerformUpdate) },
                             )
                         }
+                    }
                 }
             }
-            if (AppConfig.isLogEnabled && context.packageName == BuildConfig.APPLICATION_ID)
+            if (AppConfig.isLogEnabled && context.packageName == BuildConfig.APPLICATION_ID) {
                 item {
                     SegmentedColumn(
-                        title = stringResource(R.string.debug)
+                        title = stringResource(R.string.debug),
                     ) {
                         item {
                             SwitchWidget(
@@ -190,7 +172,13 @@ fun AboutPage(
                                 title = stringResource(R.string.save_logs),
                                 description = stringResource(R.string.save_logs_desc),
                                 checked = uiState.enableFileLogging,
-                                onCheckedChange = { viewModel.dispatch(AboutAction.SetEnableFileLogging(it)) }
+                                onCheckedChange = {
+                                    viewModel.dispatch(
+                                        AboutAction.SetEnableFileLogging(
+                                            it,
+                                        ),
+                                    )
+                                },
                             )
                         }
                         item(animatedVisibility = uiState.enableFileLogging) {
@@ -198,23 +186,24 @@ fun AboutPage(
                                 icon = AppIcons.BugReport,
                                 title = stringResource(R.string.export_logs),
                                 description = stringResource(R.string.export_logs_desc),
-                                onClick = { viewModel.dispatch(AboutAction.ShareLog) }
+                                onClick = { viewModel.dispatch(AboutAction.ShareLog) },
                             )
                         }
                     }
                 }
-            item { Spacer(Modifier.navigationBarsPadding()) }
+            }
         }
     }
     if (showBottomSheet) {
         ModalBottomSheet(onDismissRequest = { showBottomSheet = false }) {
+            WindowNavigationEventBridge()
             BottomSheetContent(
                 title = stringResource(R.string.get_update),
                 hasUpdate = uiState.hasUpdate,
                 onDirectUpdateClick = {
                     showBottomSheet = false
                     viewModel.dispatch(AboutAction.PerformUpdate)
-                }
+                },
             )
         }
     }
@@ -226,7 +215,7 @@ private fun BottomSheetContent(
     title: String,
     hasUpdate: Boolean,
     canDirectUpdate: Boolean = true,
-    onDirectUpdateClick: () -> Unit
+    onDirectUpdateClick: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
     val haptic = LocalHapticFeedback.current
@@ -234,12 +223,12 @@ private fun BottomSheetContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp, 0.dp, 16.dp, 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 20.dp)
+            modifier = Modifier.padding(bottom = 20.dp),
         )
 
         if (hasUpdate && canDirectUpdate) {
@@ -248,17 +237,17 @@ private fun BottomSheetContent(
                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                     onDirectUpdateClick()
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
                     imageVector = AppIcons.Update,
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(24.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.get_update_directly),
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.labelLarge,
                 )
             }
         }
@@ -267,12 +256,12 @@ private fun BottomSheetContent(
                 haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                 uriHandler.openUri("https://github.com/wxxsfxyzm/InstallerX-Revived/releases")
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_github),
                 contentDescription = "GitHub Icon",
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "GitHub")
@@ -282,12 +271,12 @@ private fun BottomSheetContent(
                 haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                 uriHandler.openUri("https://t.me/installerx_revived")
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_telegram),
                 contentDescription = "Telegram Icon",
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "Telegram")

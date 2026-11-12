@@ -28,13 +28,11 @@ import com.rosan.installer.ui.page.miuix.installer.components.AppInfoState
 import com.rosan.installer.ui.page.miuix.widgets.MiuixErrorTextBlock
 import com.rosan.installer.ui.page.miuix.widgets.MiuixNavigationItemWidget
 import com.rosan.installer.ui.page.miuix.widgets.MiuixUninstallConfirmationDialog
-import com.rosan.installer.ui.theme.InstallerTheme
-import com.rosan.installer.ui.theme.miuixSheetCardColorDark
+import com.rosan.installer.ui.theme.miuixSheetCardColors
 import com.rosan.installer.ui.util.isGestureNavigation
 import com.rosan.installer.ui.util.rememberErrorSuggestions
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardColors
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -44,16 +42,15 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 fun InstallFailedContent(
     appInfo: AppInfoState,
     viewModel: InstallerViewModel,
-    onClose: () -> Unit
+    onClose: () -> Unit,
 ) {
-    val isDarkMode = InstallerTheme.isDark
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentError = uiState.error
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         AppInfoSlot(appInfo = appInfo)
         Spacer(modifier = Modifier.height(32.dp))
@@ -61,13 +58,12 @@ fun InstallFailedContent(
             error = currentError,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f, fill = false)
+                .weight(1f, fill = false),
         )
         Spacer(modifier = Modifier.height(16.dp))
         MiuixErrorSuggestions(
-            isDarkMode = isDarkMode,
             error = currentError,
-            viewModel = viewModel
+            viewModel = viewModel,
         )
         Row(
             modifier = Modifier
@@ -80,7 +76,7 @@ fun InstallFailedContent(
                 text = stringResource(R.string.close),
                 colors = ButtonDefaults.textButtonColors(
                     color = if (isDynamicColor) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.secondaryVariant,
-                    textColor = if (isDynamicColor) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSecondaryVariant
+                    textColor = if (isDynamicColor) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSecondaryVariant,
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -90,7 +86,6 @@ fun InstallFailedContent(
 
 @Composable
 private fun MiuixErrorSuggestions(
-    isDarkMode: Boolean,
     error: Throwable,
     viewModel: InstallerViewModel,
 ) {
@@ -105,31 +100,27 @@ private fun MiuixErrorSuggestions(
             confirmKeepData = keepData
             pendingConflictingPackage = conflictingPkg
             showUninstallConfirmDialogState.value = true
-        }
+        },
     )
 
     if (visibleSuggestions.isNotEmpty()) {
         Column(modifier = Modifier.fillMaxWidth()) {
             SmallTitle(
                 text = stringResource(R.string.smart_suggestions),
-                insideMargin = PaddingValues(12.dp, 8.dp)
+                insideMargin = PaddingValues(12.dp, 8.dp),
             )
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
-                colors = CardColors(
-                    color = if (isDynamicColor) MiuixTheme.colorScheme.surfaceContainer else
-                        if (isDarkMode) miuixSheetCardColorDark else Color.White,
-                    contentColor = MiuixTheme.colorScheme.onSurface
-                )
+                colors = miuixSheetCardColors(),
             ) {
                 visibleSuggestions.forEach { suggestion ->
                     MiuixNavigationItemWidget(
                         title = stringResource(id = suggestion.labelRes),
                         description = suggestion.descriptionRes?.let { stringResource(id = it) } ?: "",
                         onClick = suggestion.onClick,
-                        insideMargin = PaddingValues(12.dp)
+                        insideMargin = PaddingValues(12.dp),
                     )
                 }
             }
@@ -143,10 +134,10 @@ private fun MiuixErrorSuggestions(
             viewModel.dispatch(
                 InstallerViewAction.UninstallAndRetryInstall(
                     keepData = confirmKeepData,
-                    conflictingPackage = pendingConflictingPackage
-                )
+                    conflictingPackage = pendingConflictingPackage,
+                ),
             )
         },
-        keepData = confirmKeepData
+        keepData = confirmKeepData,
     )
 }

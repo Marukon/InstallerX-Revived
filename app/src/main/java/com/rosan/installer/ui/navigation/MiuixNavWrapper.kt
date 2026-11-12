@@ -19,6 +19,7 @@ import com.rosan.installer.R
 import com.rosan.installer.domain.settings.model.preferences.ThemeState
 import com.rosan.installer.domain.settings.repository.ConfigRepository
 import com.rosan.installer.ui.icons.AppIcons
+import com.rosan.installer.ui.library.FloatingBottomBarMode
 import com.rosan.installer.ui.page.main.settings.SettingsSharedViewModel
 import com.rosan.installer.ui.page.miuix.settings.SettingsCompactLayout
 import com.rosan.installer.ui.page.miuix.settings.SettingsWideScreenLayout
@@ -30,19 +31,21 @@ import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.NavigationItem
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.material.isRenderEffectSupported
 
 // Centralized complex layout logic to keep provider clean and readable
 @Composable
-fun MiuixMainPageWrapper(
-    uiState: ThemeState,
-    sharedViewModel: SettingsSharedViewModel
-) {
+fun MiuixMainPageWrapper(uiState: ThemeState, sharedViewModel: SettingsSharedViewModel) {
     val layoutInfo = LocalWindowLayoutInfo.current
     val sharedState by sharedViewModel.state.collectAsStateWithLifecycle()
     val useBlur = uiState.useBlur
-    val useFloatingBottomBar = uiState.useAppleFloatingBar
-    val useFloatingBottomBarBlur =
-        useBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    val useOs4 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && uiState.useMiuixOs4 && isRenderEffectSupported()
+    val useFloatingBottomBar = useOs4 || uiState.useAppleFloatingBar
+    val floatingBottomBarMode = when {
+        useBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> FloatingBottomBarMode.LiquidGlass
+        useBlur -> FloatingBottomBarMode.Blur
+        else -> FloatingBottomBarMode.None
+    }
 
     val configRepo = koinInject<ConfigRepository>()
     val configCountFlow = remember { configRepo.flowAll().map { it.size } }
@@ -57,26 +60,26 @@ fun MiuixMainPageWrapper(
         listOf(
             NavigationItem(
                 label = homeLabel,
-                icon = homeIcon
+                icon = homeIcon,
             ),
             NavigationItem(
                 label = configLabel,
-                icon = Icons.Rounded.RoomPreferences
+                icon = Icons.Rounded.RoomPreferences,
             ),
             NavigationItem(
                 label = historyLabel,
-                icon = AppIcons.History
+                icon = AppIcons.History,
             ),
             NavigationItem(
                 label = preferredLabel,
-                icon = Icons.Rounded.Settings
-            )
+                icon = Icons.Rounded.Settings,
+            ),
         )
     }
 
     val pagerState = rememberPagerState(
         initialPage = sharedState.lastMainPageIndex,
-        pageCount = { navigationItems.size }
+        pageCount = { navigationItems.size },
     )
     val mainPagerState = rememberMainPagerState(pagerState)
     val currentPage = mainPagerState.pagerState.currentPage
@@ -108,9 +111,10 @@ fun MiuixMainPageWrapper(
             navigationItems = navigationItems,
             snackbarHostState = snackbarHostState,
             useFloatingBottomBar = useFloatingBottomBar,
-            useFloatingBottomBarBlur = useFloatingBottomBarBlur,
+            useOs4 = useOs4,
+            floatingBottomBarMode = floatingBottomBarMode,
             floatingBackdrop = floatingBackdrop,
-            miuixBackdrop = miuixBackdrop
+            miuixBackdrop = miuixBackdrop,
         )
     } else {
         SettingsCompactLayout(
@@ -119,9 +123,10 @@ fun MiuixMainPageWrapper(
             navigationItems = navigationItems,
             snackbarHostState = snackbarHostState,
             useFloatingBottomBar = useFloatingBottomBar,
-            useFloatingBottomBarBlur = useFloatingBottomBarBlur,
+            useOs4 = useOs4,
+            floatingBottomBarMode = floatingBottomBarMode,
             floatingBackdrop = floatingBackdrop,
-            miuixBackdrop = miuixBackdrop
+            miuixBackdrop = miuixBackdrop,
         )
     }
 }

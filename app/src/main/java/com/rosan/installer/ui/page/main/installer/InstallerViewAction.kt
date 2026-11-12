@@ -10,9 +10,11 @@ import com.rosan.installer.domain.settings.model.config.InstallerMode
 
 sealed interface InstallerViewAction {
     data class CollectSession(val session: InstallerSessionRepository) : InstallerViewAction
+    data object PrepareClose : InstallerViewAction
     data object Close : InstallerViewAction
     data object Analyse : InstallerViewAction
     data object InstallChoice : InstallerViewAction
+    data class SelectMixedModuleType(val installAsModule: Boolean) : InstallerViewAction
     data object InstallExtendedMenu : InstallerViewAction
     data object InstallExtendedSubMenu : InstallerViewAction
 
@@ -34,11 +36,14 @@ sealed interface InstallerViewAction {
      * @see com.rosan.installer.data.session.repository.InstallerSessionRepositoryImpl.Action.Install
      */
     data class Install(val triggerAuth: Boolean) : InstallerViewAction
+    data object RequestUnknownSourcePermission : InstallerViewAction
     data object Background : InstallerViewAction
     data object Cancel : InstallerViewAction
     data class Reboot(val reason: String) : InstallerViewAction
 
     data object Uninstall : InstallerViewAction
+    data object StartUnarchive : InstallerViewAction
+    data object OpenUnarchiveErrorAction : InstallerViewAction
 
     data object ShowMiuixSheetRightActionSettings : InstallerViewAction
     data object HideMiuixSheetRightActionSettings : InstallerViewAction
@@ -53,6 +58,12 @@ sealed interface InstallerViewAction {
      * Toggles the selection state of the current app.
      */
     data class ToggleSelection(val packageName: String, val entity: SelectInstallEntity, val isMultiSelect: Boolean) : InstallerViewAction
+
+    /** Clears a single-package row or restores its previous file choices. */
+    data class TogglePackageSelection(val packageName: String, val entity: SelectInstallEntity) : InstallerViewAction
+
+    /** Sets all non-module entries in the current choice session in one update. */
+    data class SetApkSelection(val selected: Boolean) : InstallerViewAction
 
     /**
      * Sets the installer mode.

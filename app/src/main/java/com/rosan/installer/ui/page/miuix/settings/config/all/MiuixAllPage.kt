@@ -22,7 +22,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -39,10 +41,9 @@ import com.rosan.installer.ui.page.main.settings.config.all.AllViewAction
 import com.rosan.installer.ui.page.main.settings.config.all.AllViewModel
 import com.rosan.installer.ui.page.main.settings.config.all.AllViewState
 import com.rosan.installer.ui.page.main.widget.util.AllViewEventCollector
+import com.rosan.installer.ui.page.miuix.widgets.InstallerMiuixTopAppBar
 import com.rosan.installer.ui.page.miuix.widgets.MiuixBadge
 import com.rosan.installer.ui.page.miuix.widgets.MiuixScopeTipCard
-import com.rosan.installer.ui.theme.getMiuixAppBarColor
-import com.rosan.installer.ui.theme.installerMiuixBlurEffect
 import com.rosan.installer.ui.theme.rememberMiuixBlurBackdrop
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.Card
@@ -55,7 +56,6 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.SnackbarResult
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Delete
@@ -67,14 +67,16 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 @Composable
 fun MiuixAllPage(
     enableBlur: Boolean,
+    useOs4: Boolean = false,
     viewModel: AllViewModel = koinViewModel(),
     title: String,
     outerPadding: PaddingValues,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
 ) {
     val navigator = LocalNavigator.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyGridState()
+    val isContentScrolled by remember { derivedStateOf { listState.canScrollBackward } }
     val scrollBehavior = MiuixScrollBehavior()
 
     AllViewEventCollector(
@@ -84,10 +86,10 @@ fun MiuixAllPage(
             val result = snackbarHostState.showSnackbar(
                 message = message,
                 actionLabel = actionLabel,
-                withDismissAction = true
+                withDismissAction = true,
             )
             result == SnackbarResult.ActionPerformed
-        }
+        },
     )
 
     val layoutDirection = LocalLayoutDirection.current
@@ -97,74 +99,81 @@ fun MiuixAllPage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                modifier = Modifier.installerMiuixBlurEffect(topBarBackdrop),
-                color = topBarBackdrop.getMiuixAppBarColor(),
+            InstallerMiuixTopAppBar(
+                useOs4 = useOs4,
+                backdrop = topBarBackdrop,
+                isContentScrolled = isContentScrolled,
+                persistentProgressiveBlur = true,
                 title = title,
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
             )
-        }
+        },
     ) { innerPadding ->
-        when (uiState.data.progress) {
-            is AllViewState.Data.Progress.Loading if uiState.data.configs.isEmpty() -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = innerPadding.calculateTopPadding(),
-                            bottom = outerPadding.calculateBottomPadding()
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+        ) {
+            when (uiState.data.progress) {
+                is AllViewState.Data.Progress.Loading if uiState.data.configs.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                top = innerPadding.calculateTopPadding(),
+                                bottom = outerPadding.calculateBottomPadding(),
+                            ),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        InfiniteProgressIndicator()
-                        Text(
-                            text = stringResource(id = R.string.loading),
-                            style = MiuixTheme.textStyles.main
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            InfiniteProgressIndicator()
+                            Text(
+                                text = stringResource(id = R.string.loading),
+                                style = MiuixTheme.textStyles.main,
+                            )
+                        }
                     }
                 }
-            }
 
-            is AllViewState.Data.Progress.Loaded if uiState.data.configs.isEmpty() -> {
-                // Since we don't allow removing default profile,
-                // There is no need to handle an empty state.
-            }
+                is AllViewState.Data.Progress.Loaded if uiState.data.configs.isEmpty() -> {
+                    // Since we don't allow removing default profile,
+                    // There is no need to handle an empty state.
+                }
 
-            else -> {
-                val configs = uiState.data.configs
-                val minId = configs.minByOrNull { it.id }?.id
+                else -> {
+                    val configs = uiState.data.configs
+                    val minId = configs.minByOrNull { it.id }?.id
 
-                LazyVerticalGrid(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(topBarBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                        .overScrollVertical()
-                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    columns = GridCells.Adaptive(350.dp),
-                    contentPadding = PaddingValues(
-                        start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
-                        end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
-                        top = innerPadding.calculateTopPadding() + 16.dp,
-                        bottom = outerPadding.calculateBottomPadding() + 16.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    overscrollEffect = null,
-                    state = listState,
-                ) {
-
-                    if (!uiState.userReadScopeTips)
-                        item {
-                            MiuixScopeTipCard(viewModel = viewModel)
+                    LazyVerticalGrid(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .overScrollVertical()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        columns = GridCells.Adaptive(350.dp),
+                        contentPadding = PaddingValues(
+                            start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp,
+                            end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,
+                            top = innerPadding.calculateTopPadding() + 16.dp,
+                            bottom = outerPadding.calculateBottomPadding() + 16.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        overscrollEffect = null,
+                        state = listState,
+                    ) {
+                        if (!uiState.userReadScopeTips) {
+                            item {
+                                MiuixScopeTipCard(viewModel = viewModel)
+                            }
                         }
-                    /*else item { Spacer(modifier = Modifier.size(6.dp)) }*/
+                        /*else item { Spacer(modifier = Modifier.size(6.dp)) }*/
 
-                    items(configs) {
-                        DataItemWidget(viewModel, it, it.id == minId)
+                        items(configs) {
+                            DataItemWidget(viewModel, it, it.id == minId)
+                        }
                     }
                 }
             }
@@ -173,27 +182,23 @@ fun MiuixAllPage(
 }
 
 @Composable
-private fun DataItemWidget(
-    viewModel: AllViewModel,
-    entity: ConfigModel,
-    isDefault: Boolean
-) {
+private fun DataItemWidget(viewModel: AllViewModel, entity: ConfigModel, isDefault: Boolean) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
                         text = entity.name,
                         style = MiuixTheme.textStyles.title4,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                     if (isDefault) {
                         Spacer(modifier = Modifier.size(8.dp))
@@ -203,7 +208,7 @@ private fun DataItemWidget(
                         MiuixBadge(
                             text = stringResource(id = R.string.config_status_inactive),
                             textColor = MiuixTheme.colorScheme.error,
-                            containerColor = MiuixTheme.colorScheme.error.copy(alpha = 0.2f)
+                            containerColor = MiuixTheme.colorScheme.error.copy(alpha = 0.2f),
                         )
                     }
                 }
@@ -212,7 +217,7 @@ private fun DataItemWidget(
                     Text(
                         text = entity.description,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        style = MiuixTheme.textStyles.subtitle
+                        style = MiuixTheme.textStyles.subtitle,
                     )
                 }
             }
@@ -220,25 +225,26 @@ private fun DataItemWidget(
         HorizontalDivider(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
         )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             IconButton(
                 minHeight = 35.dp,
                 minWidth = 35.dp,
                 backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
-                onClick = { viewModel.dispatch(AllViewAction.EditDataConfig(entity)) }) {
+                onClick = { viewModel.dispatch(AllViewAction.EditDataConfig(entity)) },
+            ) {
                 Icon(
                     modifier = Modifier.size(20.dp),
                     imageVector = MiuixIcons.Regular.Edit,
                     tint = MiuixTheme.colorScheme.onSurface.copy(alpha = if (isSystemInDarkTheme()) 0.7f else 0.9f),
-                    contentDescription = stringResource(id = R.string.edit)
+                    contentDescription = stringResource(id = R.string.edit),
                 )
             }
             if (!isDefault) {
@@ -246,12 +252,13 @@ private fun DataItemWidget(
                     minHeight = 35.dp,
                     minWidth = 35.dp,
                     backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
-                    onClick = { viewModel.dispatch(AllViewAction.DeleteDataConfig(entity)) }) {
+                    onClick = { viewModel.dispatch(AllViewAction.DeleteDataConfig(entity)) },
+                ) {
                     Icon(
                         modifier = Modifier.size(20.dp),
                         imageVector = MiuixIcons.Regular.Delete,
                         tint = MiuixTheme.colorScheme.onSurface.copy(alpha = if (isSystemInDarkTheme()) 0.7f else 0.9f),
-                        contentDescription = stringResource(id = R.string.delete)
+                        contentDescription = stringResource(id = R.string.delete),
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
@@ -259,20 +266,20 @@ private fun DataItemWidget(
                     minHeight = 35.dp,
                     minWidth = 35.dp,
                     backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
-                    onClick = { viewModel.dispatch(AllViewAction.ApplyConfig(entity)) }
+                    onClick = { viewModel.dispatch(AllViewAction.ApplyConfig(entity)) },
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxHeight()
                             .padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = Arrangement.Center,
                     ) {
                         Icon(
                             modifier = Modifier.size(20.dp),
                             imageVector = MiuixIcons.Regular.SelectAll,
                             tint = MiuixTheme.colorScheme.onSurface.copy(alpha = if (isSystemInDarkTheme()) 0.7f else 0.9f),
-                            contentDescription = stringResource(id = R.string.apply)
+                            contentDescription = stringResource(id = R.string.apply),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -280,7 +287,7 @@ private fun DataItemWidget(
                             text = stringResource(R.string.config_scope),
                             color = MiuixTheme.colorScheme.onSurface.copy(alpha = if (isSystemInDarkTheme()) 0.7f else 0.9f),
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
                         )
                     }
                 }

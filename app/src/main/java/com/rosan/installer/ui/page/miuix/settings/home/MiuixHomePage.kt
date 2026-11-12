@@ -6,11 +6,13 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,12 +21,14 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +48,7 @@ import com.rosan.installer.R
 import com.rosan.installer.core.env.DeviceConfig
 import com.rosan.installer.domain.settings.model.config.Authorizer
 import com.rosan.installer.domain.settings.model.preferences.RootMode
+import com.rosan.installer.ui.icons.AppIcons
 import com.rosan.installer.ui.navigation.LocalNavigator
 import com.rosan.installer.ui.navigation.Route
 import com.rosan.installer.ui.page.main.settings.home.HomePageViewAction
@@ -51,9 +56,9 @@ import com.rosan.installer.ui.page.main.settings.home.HomePageViewEvent
 import com.rosan.installer.ui.page.main.settings.home.HomePageViewModel
 import com.rosan.installer.ui.page.main.settings.home.HomePageViewState
 import com.rosan.installer.ui.page.main.widget.util.OnLifecycleEvent
+import com.rosan.installer.ui.page.miuix.widgets.InstallerMiuixBackdropSurface
+import com.rosan.installer.ui.page.miuix.widgets.InstallerMiuixTopAppBar
 import com.rosan.installer.ui.theme.InstallerTheme
-import com.rosan.installer.ui.theme.getMiuixAppBarColor
-import com.rosan.installer.ui.theme.installerMiuixBlurEffect
 import com.rosan.installer.ui.theme.miuixHomeStatusCardColorActivated
 import com.rosan.installer.ui.theme.miuixHomeStatusCardColorDeactivated
 import com.rosan.installer.ui.theme.rememberMiuixBlurBackdrop
@@ -66,8 +71,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
@@ -77,17 +80,20 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 @Composable
 fun MiuixHomePage(
     enableBlur: Boolean,
+    useOs4: Boolean = false,
     viewModel: HomePageViewModel = koinViewModel(),
     title: String,
     configCount: Int = 0,
     outerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
-    onNavigateToProfiles: () -> Unit = {}
+    onNavigateToProfiles: () -> Unit = {},
 ) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val uiState by viewModel.state.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+    val isContentScrolled by remember { derivedStateOf { listState.canScrollBackward } }
     val scrollBehavior = MiuixScrollBehavior()
     val layoutDirection = LocalLayoutDirection.current
 
@@ -95,7 +101,8 @@ fun MiuixHomePage(
         viewModel.dispatch(HomePageViewAction.RefreshActivateStatus)
     }
 
-    @SuppressLint("LocalContextGetResourceValueCall") LaunchedEffect(Unit) {
+    @SuppressLint("LocalContextGetResourceValueCall")
+    LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
             when (event) {
                 is HomePageViewEvent.ShowDefaultInstallerResult -> {
@@ -114,103 +121,119 @@ fun MiuixHomePage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                modifier = Modifier.installerMiuixBlurEffect(backdrop),
-                color = backdrop.getMiuixAppBarColor(),
+            InstallerMiuixTopAppBar(
+                useOs4 = useOs4,
+                backdrop = backdrop,
+                isContentScrolled = isContentScrolled,
                 title = title,
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
             )
-        }
+        },
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                start = innerPadding.calculateStartPadding(layoutDirection) + 12.dp,
-                top = innerPadding.calculateTopPadding() + 12.dp,
-                end = innerPadding.calculateEndPadding(layoutDirection) + 12.dp,
-                bottom = outerPadding.calculateBottomPadding()
-            ),
-            overscrollEffect = null
+        InstallerMiuixBackdropSurface(
+            backdrop = backdrop,
+            modifier = Modifier.fillMaxSize(),
         ) {
-            item {
-                MiuixStatusGrid(
-                    uiState = uiState,
-                    configCount = configCount,
-                    onInstallerClick = { navigator.push(Route.DefaultInstaller) },
-                    onAuthorizersClick = { navigator.push(Route.Priv) },
-                    onProfilesClick = onNavigateToProfiles
-                )
-            }
-
-            item {
-                Card(modifier = Modifier.padding(vertical = 12.dp)) {
-                    BasicComponent(
-                        title = stringResource(R.string.home_device_info_model),
-                        summary = uiState.deviceName
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = innerPadding.calculateStartPadding(layoutDirection) + 12.dp,
+                    top = innerPadding.calculateTopPadding() + 12.dp,
+                    end = innerPadding.calculateEndPadding(layoutDirection) + 12.dp,
+                    bottom = outerPadding.calculateBottomPadding(),
+                ),
+                overscrollEffect = null,
+            ) {
+                item {
+                    MiuixStatusGrid(
+                        uiState = uiState,
+                        configCount = configCount,
+                        onInstallerClick = { navigator.push(Route.DefaultInstaller) },
+                        onAuthorizersClick = { navigator.push(Route.Priv) },
+                        onProfilesClick = onNavigateToProfiles,
                     )
-                    BasicComponent(
-                        title = stringResource(R.string.home_device_info_system),
-                        summary = DeviceConfig.systemVersion
-                    )
-                    val authorizerText = when {
-                        uiState.isSystemApp -> stringResource(R.string.working_status_system_installer)
-                        uiState.globalAuthorizer == Authorizer.Shizuku -> {
-                            stringResource(R.string.config_authorizer_shizuku) + " " + when {
-                                uiState.shizukuAuthorized -> "(${uiState.shizukuMode.desc})"
-                                uiState.shizukuAvailable -> "(${stringResource(R.string.shizuku_not_authorized)})"
-                                else -> "(${stringResource(R.string.shizuku_not_available)})"
+                }
+
+                item {
+                    Card(modifier = Modifier.padding(vertical = 12.dp)) {
+                        BasicComponent(
+                            title = stringResource(R.string.home_device_info_model),
+                            summary = uiState.deviceName,
+                        )
+                        BasicComponent(
+                            title = stringResource(R.string.home_device_info_system),
+                            summary = DeviceConfig.systemVersion,
+                        )
+                        val isCustomizeAuthorizer = uiState.globalAuthorizer == Authorizer.Customize
+                        val authorizerText = when {
+                            isCustomizeAuthorizer ->
+                                uiState.customizeAuthorizer
+                                    .takeIf { it.isNotBlank() }
+                                    ?.let { stringResource(R.string.config_authorizer_command_desc, it) }
+                                    ?: stringResource(R.string.config_authorizer_customize)
+
+                            uiState.isSystemApp -> stringResource(R.string.working_status_system_installer)
+
+                            uiState.globalAuthorizer == Authorizer.Shizuku -> {
+                                stringResource(R.string.config_authorizer_shizuku) + " " + when {
+                                    uiState.shizukuAuthorized -> "(${uiState.shizukuMode.desc})"
+                                    uiState.shizukuAvailable -> "(${stringResource(R.string.shizuku_not_authorized)})"
+                                    else -> "(${stringResource(R.string.shizuku_not_available)})"
+                                }
                             }
-                        }
 
-                        uiState.globalAuthorizer == Authorizer.Root -> {
-                            stringResource(R.string.config_authorizer_root) + " " + if (uiState.rootMode != RootMode.None) {
-                                "(${uiState.rootMode.name})"
-                            } else "(${stringResource(R.string.unavailable)})"
-                        }
-
-                        uiState.globalAuthorizer == Authorizer.Dhizuku -> {
-                            stringResource(R.string.config_authorizer_dhizuku) + " " + when {
-                                uiState.dhizukuAuthorized -> "(${stringResource(R.string.activate)})"
-                                uiState.dhizukuAvailable -> "(${stringResource(R.string.dhizuku_not_authorized)})"
-                                else -> "(${stringResource(R.string.dhizuku_not_available)})"
+                            uiState.globalAuthorizer == Authorizer.Root -> {
+                                stringResource(R.string.config_authorizer_root) + " " + if (uiState.rootMode != RootMode.None) {
+                                    "(${uiState.rootMode.name})"
+                                } else {
+                                    "(${stringResource(R.string.unavailable)})"
+                                }
                             }
-                        }
 
-                        else -> stringResource(uiState.globalAuthorizer.displayNameRes)
+                            uiState.globalAuthorizer == Authorizer.Dhizuku -> {
+                                stringResource(R.string.config_authorizer_dhizuku) + " " + when {
+                                    uiState.dhizukuAuthorized -> "(${stringResource(R.string.activate)})"
+                                    uiState.dhizukuAvailable -> "(${stringResource(R.string.dhizuku_not_authorized)})"
+                                    else -> "(${stringResource(R.string.dhizuku_not_available)})"
+                                }
+                            }
+
+                            else -> stringResource(uiState.globalAuthorizer.displayNameRes)
+                        }
+                        BasicComponent(
+                            title = stringResource(R.string.home_device_info_active_authorizer),
+                            summary = authorizerText,
+                        )
+                        BasicComponent(
+                            title = stringResource(R.string.home_device_info_default_installer),
+                            summary = uiState.defaultInstaller,
+                        )
                     }
-                    BasicComponent(
-                        title = stringResource(R.string.home_device_info_active_authorizer),
-                        summary = authorizerText
-                    )
-                    BasicComponent(
-                        title = stringResource(R.string.home_device_info_default_installer),
-                        summary = uiState.defaultInstaller
-                    )
                 }
-            }
 
-            item {
-                Card(modifier = Modifier.padding(bottom = 12.dp)) {
-                    BasicComponent(
-                        title = stringResource(R.string.home_learn_more_installerx_title),
-                        summary = stringResource(R.string.home_learn_more_installerx_desc),
-                        endActions = {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_link_icon),
-                                contentDescription = null
-                            )
-                        },
-                        onClick = { uriHandler.openUri("https://wxxsfxyzm.github.io/InstallerX-Revived-Website/") }
-                    )
+                item {
+                    Card(modifier = Modifier.padding(bottom = 12.dp)) {
+                        BasicComponent(
+                            title = stringResource(R.string.home_learn_more_installerx_title),
+                            summary = stringResource(R.string.home_learn_more_installerx_desc),
+                            endActions = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_link_icon),
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = { uriHandler.openUri("https://wxxsfxyzm.github.io/InstallerX-Revived-Website/") },
+                        )
+                    }
                 }
-            }
 
-            item { Spacer(modifier = Modifier.navigationBarsPadding()) }
+                item { Spacer(modifier = Modifier.navigationBarsPadding()) }
+            }
         }
     }
 }
@@ -221,7 +244,7 @@ private fun MiuixStatusGrid(
     configCount: Int,
     onInstallerClick: () -> Unit,
     onAuthorizersClick: () -> Unit,
-    onProfilesClick: () -> Unit
+    onProfilesClick: () -> Unit,
 ) {
     val isActive = uiState.isDefaultInstaller || uiState.isSystemApp
     val isSystemInstallerActive = uiState.isSystemApp && uiState.globalAuthorizer == Authorizer.None
@@ -254,7 +277,7 @@ private fun MiuixStatusGrid(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Large Status Card
         Card(
@@ -262,7 +285,7 @@ private fun MiuixStatusGrid(
             colors = CardDefaults.defaultColors(color = containerColor),
             onClick = onInstallerClick,
             showIndication = true,
-            pressFeedbackType = PressFeedbackType.Tilt
+            pressFeedbackType = PressFeedbackType.Tilt,
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 // Background Icon
@@ -271,24 +294,36 @@ private fun MiuixStatusGrid(
                     modifier = Modifier
                         .matchParentSize()
                         .offset(50.dp, 38.dp),
-                    contentAlignment = Alignment.BottomEnd
+                    contentAlignment = Alignment.BottomEnd,
                 ) {
                     Icon(
                         modifier = Modifier.size(170.dp),
-                        imageVector = if (isActive) Icons.Rounded.CheckCircleOutline else Icons.Rounded.ErrorOutline,
+                        imageVector = if (isActive) AppIcons.Active else Icons.Rounded.ErrorOutline,
                         tint = if (isActive) {
-                            if (isDynamicColor) MiuixTheme.colorScheme.primary.copy(alpha = 0.8f) else miuixHomeStatusCardColorActivated
+                            if (isDynamicColor) {
+                                MiuixTheme.colorScheme.primary.copy(
+                                    alpha = 0.8f,
+                                )
+                            } else {
+                                miuixHomeStatusCardColorActivated
+                            }
                         } else {
-                            if (isDynamicColor) MiuixTheme.colorScheme.error.copy(alpha = 0.8f) else miuixHomeStatusCardColorDeactivated
+                            if (isDynamicColor) {
+                                MiuixTheme.colorScheme.error.copy(
+                                    alpha = 0.8f,
+                                )
+                            } else {
+                                miuixHomeStatusCardColorDeactivated
+                            }
                         },
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 }
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(all = 16.dp)
+                        .padding(all = 16.dp),
                 ) {
                     // Slot 1: Main Status Title
                     Text(
@@ -298,11 +333,11 @@ private fun MiuixStatusGrid(
                                 uiState.isSystemApp -> R.string.working_status_system_installer
                                 uiState.isDefaultInstaller -> R.string.working_status_default_installer
                                 else -> R.string.working_status_not_default_installer
-                            }
+                            },
                         ),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = textContentColor
+                        color = textContentColor,
                     )
                     Spacer(Modifier.height(2.dp))
 
@@ -310,69 +345,74 @@ private fun MiuixStatusGrid(
                     Text(
                         modifier = Modifier.fillMaxWidth(),
                         text = stringResource(
-                            if (uiState.isSystemApp) R.string.working_status_system_installer_desc
-                            else if (uiState.isDefaultInstaller) R.string.working_status_default_installer_desc
-                            else R.string.working_status_not_default_installer_click_details
+                            if (uiState.isSystemApp) {
+                                R.string.working_status_system_installer_desc
+                            } else if (uiState.isDefaultInstaller) {
+                                R.string.working_status_default_installer_desc
+                            } else {
+                                R.string.working_status_not_default_installer_click_details
+                            },
                         ),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = descTextColor
+                        color = descTextColor,
                     )
 
                     Spacer(Modifier.height(36.dp))
 
                     // Slot 3: Current Authorizer Type
-                    if (!isSystemInstallerActive)
+                    if (!isSystemInstallerActive) {
                         Text(
                             modifier = Modifier.fillMaxWidth(),
                             text = stringResource(uiState.globalAuthorizer.displayNameRes),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
-                            color = descTextColor
+                            color = descTextColor,
                         )
-                    else
+                    } else {
                         Spacer(Modifier.height(16.dp))
+                    }
                 }
             }
         }
 
         // Two smaller cards placed flat on the second row
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
             MiuixStatCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 title = stringResource(R.string.home_stat_authorizers),
                 value = uiState.availableAuthorizerCount.toString(),
-                onClick = onAuthorizersClick
+                onClick = onAuthorizersClick,
             )
             MiuixStatCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 title = stringResource(R.string.home_stat_profiles),
                 value = configCount.toString(),
-                onClick = onProfilesClick
+                onClick = onProfilesClick,
             )
         }
     }
 }
 
 @Composable
-private fun MiuixStatCard(
-    modifier: Modifier = Modifier,
-    title: String,
-    value: String,
-    onClick: () -> Unit
-) {
+private fun MiuixStatCard(modifier: Modifier = Modifier, title: String, value: String, onClick: () -> Unit) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier,
         insideMargin = PaddingValues(16.dp),
         onClick = onClick,
         showIndication = true,
-        pressFeedbackType = PressFeedbackType.Tilt
+        pressFeedbackType = PressFeedbackType.Tilt,
     ) {
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start,
+        ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = title,
@@ -397,14 +437,14 @@ private fun MiuixStatusGridPreview() {
     val uiState = HomePageViewState(
         isDefaultInstaller = true,
         availableAuthorizerCount = 3,
-        isSystemApp = false
+        isSystemApp = false,
     )
     MiuixStatusGrid(
         uiState = uiState,
         configCount = 5,
         onInstallerClick = {},
         onAuthorizersClick = {},
-        onProfilesClick = {}
+        onProfilesClick = {},
     )
 }
 
@@ -414,13 +454,13 @@ private fun MiuixStatusGridInactivePreview() {
     val uiState = HomePageViewState(
         isDefaultInstaller = false,
         availableAuthorizerCount = 1,
-        isSystemApp = false
+        isSystemApp = false,
     )
     MiuixStatusGrid(
         uiState = uiState,
         configCount = 2,
         onInstallerClick = {},
         onAuthorizersClick = {},
-        onProfilesClick = {}
+        onProfilesClick = {},
     )
 }

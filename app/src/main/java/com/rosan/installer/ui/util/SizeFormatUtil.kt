@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.ui.util
 
 import java.util.Locale
@@ -12,6 +14,6 @@ fun Long.formatSize(): String {
         Locale.getDefault(),
         "%.2f %s",
         this / 1024.0.pow(digitGroups.toDouble()),
-        units[digitGroups]
+        units[digitGroups],
     )
 }

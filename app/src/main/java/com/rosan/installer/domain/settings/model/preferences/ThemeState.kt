@@ -12,13 +12,15 @@ data class ThemeState(
     val isLoaded: Boolean = false,
     val useMiuix: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val useAmoled: Boolean = false,
     val paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
     val colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2025,
     val useDynamicColor: Boolean = true,
+    val useMiuixOs4: Boolean = false,
     val useMiuixMonet: Boolean = false,
     val useAppleFloatingBar: Boolean = false,
     val seedColor: Int = 0xFF6750A4.toInt(),
     val useBlur: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
     val predictiveBackAnimation: PredictiveBackAnimation = PredictiveBackAnimation.MIUIX,
-    val predictiveBackExitDirection: PredictiveBackExitDirection = PredictiveBackExitDirection.ALWAYS_RIGHT
+    val predictiveBackExitDirection: PredictiveBackExitDirection = PredictiveBackExitDirection.ALWAYS_RIGHT,
 )

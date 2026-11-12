@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2025-2026 InstallerX Revived contributors
 package com.rosan.installer.domain.engine.repository
 
 import com.rosan.installer.domain.engine.model.packageinfo.AppEntity
@@ -18,6 +20,6 @@ interface ModuleInstallerRepository {
         config: ConfigModel,
         module: AppEntity.ModuleEntity,
         useRoot: Boolean,
-        rootMode: RootMode
+        rootMode: RootMode,
     ): Flow<String> // Return a Flow of strings
 }

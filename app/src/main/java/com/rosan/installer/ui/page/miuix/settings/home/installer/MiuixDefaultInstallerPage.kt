@@ -40,12 +40,12 @@ import com.rosan.installer.ui.page.main.settings.home.HomePageViewEvent
 import com.rosan.installer.ui.page.main.settings.home.HomePageViewModel
 import com.rosan.installer.ui.page.main.settings.home.delayDefaultInstallerProgressIfNeeded
 import com.rosan.installer.ui.page.miuix.widgets.ErrorDisplaySheet
+import com.rosan.installer.ui.page.miuix.widgets.InstallerMiuixBackButton
+import com.rosan.installer.ui.page.miuix.widgets.InstallerMiuixBackdropSurface
+import com.rosan.installer.ui.page.miuix.widgets.InstallerMiuixTopAppBar
 import com.rosan.installer.ui.page.miuix.widgets.MiuixBlockingLoadingDialog
-import com.rosan.installer.ui.page.miuix.widgets.MiuixBackButton
 import com.rosan.installer.ui.page.miuix.widgets.MiuixSettingsTipCard
 import com.rosan.installer.ui.page.miuix.widgets.MiuixSwitchWidget
-import com.rosan.installer.ui.theme.getMiuixAppBarColor
-import com.rosan.installer.ui.theme.installerMiuixBlurEffect
 import com.rosan.installer.ui.theme.rememberMiuixBlurBackdrop
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -54,17 +54,12 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Composable
-fun MiuixDefaultInstallerPage(
-    useBlur: Boolean,
-    viewModel: HomePageViewModel = koinViewModel()
-) {
+fun MiuixDefaultInstallerPage(useBlur: Boolean, viewModel: HomePageViewModel = koinViewModel()) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -101,7 +96,8 @@ fun MiuixDefaultInstallerPage(
         }
     }
 
-    @SuppressLint("LocalContextGetResourceValueCall") LaunchedEffect(Unit) {
+    @SuppressLint("LocalContextGetResourceValueCall")
+    LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
             when (event) {
                 is HomePageViewEvent.ShowDefaultInstallerResult -> {
@@ -121,102 +117,100 @@ fun MiuixDefaultInstallerPage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                modifier = Modifier.installerMiuixBlurEffect(backdrop),
-                color = backdrop.getMiuixAppBarColor(),
+            InstallerMiuixTopAppBar(
+                backdrop = backdrop,
                 title = stringResource(R.string.default_installer),
                 navigationIcon = {
-                    MiuixBackButton(onClick = { navigator.pop() })
+                    InstallerMiuixBackButton(onClick = { navigator.pop() })
                 },
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-                top = paddingValues.calculateTopPadding(),
-                end = horizontalSafeInsets.calculateEndPadding(layoutDirection)
-            ),
-            overscrollEffect = null
+        InstallerMiuixBackdropSurface(
+            backdrop = backdrop,
+            modifier = Modifier.fillMaxSize(),
         ) {
-            item {
-                val tip = when {
-                    uiState.isSystemApp -> stringResource(R.string.config_authorizer_none_system_app_tips)
-                    uiState.globalAuthorizer == Authorizer.None -> stringResource(R.string.config_authorizer_none_tips)
-                    else -> stringResource(R.string.working_status_default_installer_tip)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                    top = paddingValues.calculateTopPadding(),
+                    end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+                ),
+                overscrollEffect = null,
+            ) {
+                item {
+                    val tip = when {
+                        uiState.isSystemApp -> stringResource(R.string.config_authorizer_none_system_app_tips)
+                        uiState.globalAuthorizer == Authorizer.None -> stringResource(R.string.config_authorizer_none_tips)
+                        else -> stringResource(R.string.working_status_default_installer_tip)
+                    }
+                    MiuixSettingsTipCard(text = tip)
                 }
-                MiuixSettingsTipCard(text = tip)
-            }
 
-            item { SmallTitle(stringResource(R.string.basic)) }
-            item {
-                Card(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp)
-                ) {
-                    MiuixAutoLockInstaller(
-                        checked = uiState.autoLockInstaller,
-                        enabled = uiState.globalAuthorizer != Authorizer.None,
-                        onCheckedChange = {
-                            viewModel.dispatch(HomePageViewAction.ChangeAutoLockInstaller(it))
+                item { SmallTitle(stringResource(R.string.basic)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        val defaultInstallerActionsEnabled =
+                            uiState.globalAuthorizer != Authorizer.None && !uiState.userSetLSPosedActive
+                        MiuixDefaultInstaller(
+                            lock = true,
+                            enabled = defaultInstallerActionsEnabled,
+                        ) { dispatchSetDefaultInstaller(true) }
+                        MiuixDefaultInstaller(
+                            lock = false,
+                            enabled = defaultInstallerActionsEnabled,
+                        ) { dispatchSetDefaultInstaller(false) }
+                    }
+                }
+
+                if (!uiState.isSystemApp) {
+                    item { SmallTitle(stringResource(R.string.advanced)) }
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .padding(bottom = 12.dp),
+                        ) {
+                            MiuixSwitchWidget(
+                                title = stringResource(R.string.setting_lsposed_module_title),
+                                description = stringResource(R.string.setting_lsposed_module_desc),
+                                checked = uiState.userSetLSPosedActive,
+                                onCheckedChange = { viewModel.dispatch(HomePageViewAction.ChangeUserSetLSPosedActive(it)) },
+                            )
                         }
-                    )
-                    MiuixDefaultInstaller(
-                        lock = true,
-                        enabled = uiState.globalAuthorizer != Authorizer.None
-                    ) { dispatchSetDefaultInstaller(true) }
-                    MiuixDefaultInstaller(
-                        lock = false,
-                        enabled = uiState.globalAuthorizer != Authorizer.None
-                    ) { dispatchSetDefaultInstaller(false) }
-                }
-            }
+                    }
 
-            if (!uiState.isSystemApp) {
-                item { SmallTitle(stringResource(R.string.home_label_lsp)) }
-                item {
-                    Card(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .padding(bottom = 12.dp)
-                    ) {
-                        MiuixSwitchWidget(
-                            title = stringResource(R.string.setting_lsposed_module_title),
-                            description = stringResource(R.string.setting_lsposed_module_desc),
-                            checked = uiState.userSetLSPosedActive,
-                            onCheckedChange = { viewModel.dispatch(HomePageViewAction.ChangeUserSetLSPosedActive(it)) }
-                        )
+                    item { SmallTitle(stringResource(R.string.home_label_lsp_link)) }
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .padding(bottom = 12.dp),
+                        ) {
+                            BasicComponent(
+                                title = stringResource(R.string.home_lsp_inxlocker_title),
+                                titleColor = BasicComponentColors(
+                                    color = MiuixTheme.colorScheme.primary,
+                                    disabledColor = MiuixTheme.colorScheme.disabledOnSecondaryVariant,
+                                ),
+                                onClick = { uriHandler.openUri("https://github.com/Chimioo/InxLocker") },
+                            )
+                        }
                     }
                 }
 
-                item { SmallTitle(stringResource(R.string.home_label_lsp_link)) }
-                item {
-                    Card(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .padding(bottom = 12.dp)
-                    ) {
-                        BasicComponent(
-                            title = stringResource(R.string.home_lsp_inxlocker_title),
-                            titleColor = BasicComponentColors(
-                                color = MiuixTheme.colorScheme.primary,
-                                disabledColor = MiuixTheme.colorScheme.disabledOnSecondaryVariant
-                            ),
-                            onClick = { uriHandler.openUri("https://github.com/Chimioo/InxLocker") }
-                        )
-                    }
-                }
+                item { Spacer(Modifier.navigationBarsPadding()) }
             }
-
-            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 
@@ -225,6 +219,7 @@ fun MiuixDefaultInstallerPage(
             showState = showErrorSheet,
             exception = info.exception,
             onDismissRequest = { showErrorSheet.value = false },
+            onDismissFinished = { errorSheetInfo = null },
             onRetry = {
                 showErrorSheet.value = false
                 val action = info.retryAction
@@ -234,45 +229,26 @@ fun MiuixDefaultInstallerPage(
                     viewModel.dispatch(action)
                 }
             },
-            title = stringResource(info.titleResId)
+            title = stringResource(info.titleResId),
         )
     }
 
     MiuixBlockingLoadingDialog(
         visible = showDefaultInstallerProgress,
-        text = stringResource(defaultInstallerProgressTextResId)
+        text = stringResource(defaultInstallerProgressTextResId),
     )
 }
 
 @Composable
-private fun MiuixAutoLockInstaller(
-    checked: Boolean,
-    enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    MiuixSwitchWidget(
-        title = stringResource(R.string.auto_lock_default_installer),
-        description = stringResource(R.string.auto_lock_default_installer_desc),
-        checked = checked,
-        enabled = enabled,
-        onCheckedChange = onCheckedChange
-    )
-}
-
-@Composable
-private fun MiuixDefaultInstaller(
-    lock: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit
-) {
+private fun MiuixDefaultInstaller(lock: Boolean, enabled: Boolean, onClick: () -> Unit) {
     BasicComponent(
         title = stringResource(
-            if (lock) R.string.lock_default_installer else R.string.unlock_default_installer
+            if (lock) R.string.lock_default_installer else R.string.unlock_default_installer,
         ),
         summary = stringResource(
-            if (lock) R.string.lock_default_installer_desc else R.string.unlock_default_installer_desc
+            if (lock) R.string.lock_default_installer_desc else R.string.unlock_default_installer_desc,
         ),
         enabled = enabled,
-        onClick = onClick
+        onClick = onClick,
     )
 }
